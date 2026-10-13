@@ -17,6 +17,8 @@ import com.hmdp.service.IFollowService;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.SystemConstants;
 import com.hmdp.utils.UserHolder;
+import org.owasp.html.HtmlPolicyBuilder;
+import org.owasp.html.PolicyFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,10 @@ import static com.hmdp.utils.RedisConstants.FEED_KEY;
 
 @Service
 public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IBlogService {
+    private static final PolicyFactory BLOG_CONTENT_POLICY = new HtmlPolicyBuilder()
+            .allowElements("br", "p", "b", "strong", "i", "em", "ul", "ol", "li")
+            .toFactory();
+
     @Resource
     private IUserService userService;
     @Resource
@@ -52,6 +58,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         if(blog == null){
             return Result.fail("该笔记不存在");
         }
+        blog.setContent(sanitizeContent(blog.getContent()));
         //查询blog相关的对象
         queryUser(blog);
         //判断是否点赞该博客
@@ -147,6 +154,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         // 获取登录用户
         UserDTO user = UserHolder.getUser();
         blog.setUserId(user.getId());
+        blog.setContent(sanitizeContent(blog.getContent()));
 
         // 保存探店笔记
         boolean isSuccess = save(blog);
@@ -207,5 +215,9 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         scrollResult.setOffset(os);
         scrollResult.setMinTime(minTime);
         return Result.ok(scrollResult);
+    }
+
+    static String sanitizeContent(String content) {
+        return content == null ? null : BLOG_CONTENT_POLICY.sanitize(content);
     }
 }

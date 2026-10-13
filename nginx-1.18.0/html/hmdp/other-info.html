@@ -55,7 +55,7 @@
         <div v-for="b in blogs" :key="b.id" class="blog-item">
           <div class="blog-img"><img :src="b.images.split(',')[0]" alt=""></div>
           <div class="blog-info">
-            <div class="blog-title" v-html="b.title"></div>
+            <div class="blog-title">{{b.title}}</div>
             <div class="blog-liked"><img src="/imgs/thumbup.png" alt=""> {{b.liked}}</div>
             <div class="blog-comments"><i class="el-icon-chat-dot-round"></i> {{b.comments}}</div>
           </div>

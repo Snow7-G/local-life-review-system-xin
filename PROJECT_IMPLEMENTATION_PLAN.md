@@ -28,6 +28,7 @@
 | Δ6 | 迁移脚本无条件 `ADD UNIQUE KEY` | 改幂等（`hmdp.sql` 基线已含 `uk_voucher_order_user_voucher`，重复执行 1061） | 实读 SQL |
 | Δ7 | 主模型 Claude Sonnet 5.5 | 本项目可用网关中 **Claude 系只走 `/provider/v1/messages`**，不走 `/chat/completions`。适配器第一天就要处理这个差异 | 端点实测 |
 | Δ8 | 「javax 换 jakarta」即可升级 | 还必须先拆 `pom.xml` 里 `spring-data-redis`/`lettuce-core` 的 exclusion + 硬钉版本（绕过 Boot BOM 的手工降级），并换 MySQL 驱动 5.1.47→8.x | 实读 pom |
+| Δ9 | agent-core 作为普通子模块 | **暂不进根 reactor**。CI 跑 JDK 8，而 agent-core 要 JDK 21 —— 一旦注册进根 `pom.xml` 的 `<modules>`，CI 立刻变红。`agent-core` 独立构建（`mvn -f agent-core/pom.xml`），等 W1 升完 JDK 21/Boot 3 再决定是否并入。**基线 CI 必须始终绿** | CI 读实（JDK 8） |
 
 ---
 
@@ -102,7 +103,13 @@
 
 ---
 
-## 4. 红线
+## 4. 审查协议与偏离手册的处理
+
+见 `docs/REVIEW-PROTOCOL.md`。要点：手册是唯一规格来源；**每个小任务至少三遍审查**
+（执行器自审 → 异源模型只读复核 → 管理者验收），每完成一个小任务即自审一遍；
+偏离手册的决定一律标 `待批准`，未经嘉点头不得落地。
+
+## 5. 红线
 
 - 原功能（秒杀/登录/关注/点赞/签到/GEO）任一损坏 = 阻塞级问题，先修再往下
 - `ManagementRoutesTest` 的断言不得为「让测试变绿」而放宽

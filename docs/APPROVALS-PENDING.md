@@ -56,4 +56,8 @@
 | 低 | stdout 非 JSON 行容忍策略（连续 N 行才判死），避免启动 banner 触发重启循环 | `StdioTransport.java:185-190` |
 | 低 | `decode` 增加尾随内容校验；`callTool` 包装 Jackson 异常为 `McpException` | `JsonRpcCodec.java:39`；`McpClient.java:68` |
 
-**状态：待批准（是否在下一卡一并处理）**
+**状态：已批准（2026-10-13，嘉以「A」全批）**
+
+批准范围：AP-001 提前做 HTTP 通道、AP-003 agent-core 暂不进根 reactor、
+AP-004 的**两条高优先级加固**（见 `docs/tasks/P1-2-mcp-hardening.md`）。
+AP-004 其余 6 条中低优先级项不在本次批准内，留待 W1 一并处理。

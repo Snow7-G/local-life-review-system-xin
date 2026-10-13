@@ -27,6 +27,6 @@ jobs:
       - name: Check Nginx configuration
         run: |
           mkdir -p nginx-1.18.0/logs
-          nginx -t -p "$GITHUB_WORKSPACE/nginx-1.18.0/" -c conf/nginx.conf
+          sudo nginx -t -p "$GITHUB_WORKSPACE/nginx-1.18.0/" -c conf/nginx.conf
       - name: Build and run tests
         run: mvn -B -ntp verify

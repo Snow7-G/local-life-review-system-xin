@@ -6,14 +6,17 @@
 
 **结论**：本卡两处测试缺口均已补上，第三条「修正 P1-3 对照表」已完成。
 `agent-core` 由 **23 → 27 tests 全绿**（要求 ≥25）；根回归 **28 / 0 / 0 / Skipped 1** 与基线逐项一致。
-**零实现改动**：`git diff --stat` 只显示测试与自审文档（`HttpTransportTest.java` +130 / −4，
-`SELF-REVIEW-P1-3.md` +16 / −8），
+**零实现改动**：`git diff --stat` 只显示测试与自审文档（`HttpTransportTest.java` +126 / −4，
+`SELF-REVIEW-P1-3.md` +12 / −4），
 `HttpTransport.java` 的 md5 与改动前一致（`dd85c60268ac5b410d4c832053b39299`）。
 
 变异自检有一个**必须如实披露的偏差**：任务卡假设「去掉 404 路径的 `sessionId = null` 一处」即可让新断言变红，
 实测**单点都不变红**——`failGeneration(...)` 与 `start()` 两处都会清 `sessionId`，互为冗余掩盖。
 **两处同时去掉**时新断言确实变红（失败输出见第五节）。这不是断言失效，而是卡里对变异点的假设过于乐观；
 细节与证据见第五节，请复核与管理层判定是否需要进一步收紧。
+**P1-5 更正入口**：本文经异源复核判定**不通过**（`docs/reviews/P1-4-review.md`，4 项必修）。
+④ 项要求的文字更正（`+130/-4` → `+126/-4`、§4.2 的错误论断）已就地改在本文，均以「更正（复核发现）」标出；
+①②③ 项属于测试代码问题，已在 P1-5 返工中修复，证据见 `agent-core/SELF-REVIEW-P1-5.md`。
 
 ## 一、改动文件
 
@@ -30,6 +33,11 @@
  .../java/dev/lifeagent/mcp/HttpTransportTest.java     | 130 ++++++++++++++++-
  2 files changed, 138 insertions(+), 8 deletions(-)
 ```
+
+更正（复核发现）：上面这段 `--stat` 输出本身是真的，但第一列是该文件的**总变更行数**
+（126 insertions + 4 deletions = 130），**不是插入数**。以 `git show --numstat --format= 0e6a8b3`
+的权威输出为准：`HttpTransportTest.java` 为 `126 4`，`SELF-REVIEW-P1-3.md` 为 `12 4`，
+两文件合计 `138 insertions / 8 deletions`，与上面 summary 行对得上。本文后续一律写 `+126 / −4`。
 
 `git diff -- agent-core/src/main/java/dev/lifeagent/mcp/HttpTransport.java` 无输出。
 未触碰 `McpClient.java`、`McpTransport.java`、`StdioTransportConfig.java`、`McpClientConfig.java`、
@@ -95,17 +103,27 @@
 - 补充量纲：`RequestRecord.sessionId()` 来自夹具 `:352-360` 对
   `exchange.getRequestHeaders().getFirst("Mcp-Session-Id")` 的记录，是线上字节级证据。
 
-### 4.2 关于"重建使用了新 session id"的诚实说明
+### 4.2 关于“重建使用了新 session id”的诚实说明
 
-任务卡写的是「重建使用了**新的** session id」。夹具两条硬约束使这一点**不可能**被差异化断言：
+任务卡写的是「重建使用了**新的** session id」。
 
-- 冻结红线用例 `sessionAndNegotiatedProtocolHeadersAreSentAfterInitialize`（`:77-94`）断言
-  **每一个非 `initialize` 请求**都带 `FakeHttpMcpServer.SESSION_ID`（`:84-86`）。
-  若重握手发放一个不同的新 id，该红线用例必红（本卡中途确实踩到过这个坑，见 4.3）。
-- 所以夹具两次握手都返回同一个 `SESSION_ID`。本卡因此把断言落在**可观测且有意义**的两件事上：
-  第二次 `initialize` 请求头为 `null`（旧 id 没有被重放），且恢复后的 `tools/call`
-  确实带上了服务端当下发的 `SESSION_ID`（`:188-190`，即"这次会话被真正用起来了"）。
-  「新旧 id 不同」这一维度在红线用例约束下不可测，如实记录于此，**不伪报**。
+**更正（复核发现）**：本节初稿声称「夹具两条硬约束使这一点**不可能**被差异化断言」、
+「若重握手发放一个不同的新 id，该红线用例必红」，**这个论断是错的**：
+
+- 每条用例在自己的 `try (...)` 里 `new FakeHttpMcpServer()`（`HttpTransportTest.java:185`），
+  服务端实例、监听端口、`requests` 列表都是**逐用例独立**的。别的用例把两次握手配成
+  「旧 id → 新 id」，与红线用例 `sessionAndNegotiatedProtocolHeadersAreSentAfterInitialize`
+  （`:77-94`）毫无交集，**不可能**让它变红。
+- 那条红线用例断言的是「**它自己那台夹具**发的每个非 `initialize` 请求都带
+  `FakeHttpMcpServer.SESSION_ID`」；只要同一用例内两次握手发同一个 id 就满足，不需要全局唯一。
+
+所以真实情况不是「被红线约束下的不可测维度」，而是本卡把要求**降级**了：两次握手发同一个 id 时，
+`anyMatch(r -> SESSION_ID.equals(r.sessionId()))` 无法区分「沿用旧 id」与「拿到新 id」——
+一条在触发 404 之前就已发出的 `expire_session` 调用就能让它满足（复核原文：`:187` 断言空洞）。
+降级需要如实报告，而不是用一条**错误的技术论断**去证明它不可避免。
+
+P1-5 已按任务卡修好：夹具支持 `issueSessionIds(旧, 新)`，并对恢复后的 `tools/call` 逐条断言 id，
+详见 `SELF-REVIEW-P1-5.md` 第 1 条。
 
 ### 4.3 notify 用例走的是哪条代码路径
 
@@ -123,6 +141,17 @@
    映射成 `McpUnavailableException` 并 `failGeneration(...)`——用例会红，但红的原因跟被测语义无关。
    实测中变体 [2] 就是这样先红过一次；正确写法是 `sendResponseHeaders(202, -1)` + 显式
    `Content-Length: 0` 头。这一条正是"202 + `Content-Length: 0`"与"202 无 body"的真实差别所在。
+   
+   **P1-5 更正（实测）**：上面这条描述只对了一半，而且把 `Invalid status line` 归因到了被测语义之外的地方。
+   P1-5 用原始 socket 探针 + 复刻 `notify(...)` 调用路径实测（证据见 `SELF-REVIEW-P1-5.md` 第二节）：
+  ① `sendResponseHeaders(202, -1)` 由 JDK 自己写成 `HTTP/1.1 202 Accepted\r\nContent-length: 0\r\n\r\n`，
+     再手工 `.set("Content-Length", "0")` 得到的是**逐字节相同**的响应，所以原 `ACCEPTED_WITHOUT_BODY`
+     与 `ACCEPTED_ZERO_LENGTH` 在线上**没有区别**，「三种形状」不成立（复核原文：`:49`、`:371`）；
+  ② `sendResponseHeaders(202, 0)` 确实切到 chunked，但按 `BodyHandlers.ofInputStream()` + 立即关闭不读
+     的真实路径连跑 6 次都正常拿到 202，未复现 `Invalid status line: "0"`；
+  ③ 「202 且无 `Content-Length`」这一形状只能经由 chunked 构造。
+   P1-5 已据此重写为三种**实测互不相同**的形状（`202`+`Content-Length: 0` / `202`+`Transfer-Encoding: chunked` / `204`），
+   并由服务端在 `sendResponseHeaders` 之后读回**真实响应头**逐变体断言。
 4. 断言面覆盖了"不抛异常"（`assertDoesNotThrow`）、"夹具真的收到了通知"
    （`notifyMethod()`）、"传输仍 running"（`isRunning()`）、"客户端仍可用"（`isAvailable()`），
    并在末尾补发一次 `callTool` 证明通道没被打死。
@@ -201,7 +230,7 @@ dd85c60268ac5b410d4c832053b39299  agent-core/src/main/java/dev/lifeagent/mcp/Htt
 
 该 md5 与变异开始前记录的完全一致；`git diff -- agent-core/src/main/java/dev/lifeagent/mcp/HttpTransport.java`
 无输出；还原后重跑全量 `agent-core` 为 **27 / 0 / 0 / 0，BUILD SUCCESS**（见第六节第 1 条）。
-`git diff --stat` 最终只剩 2 个文件：`HttpTransportTest.java`（+130 / −4）与 `SELF-REVIEW-P1-3.md`（+16 / −8）。
+`git diff --stat` 最终只剩 2 个文件：`HttpTransportTest.java`（+126 / −4）与 `SELF-REVIEW-P1-3.md`（+12 / −4）。
 
 ## 六、验证记录
 
@@ -240,8 +269,8 @@ dd85c60268ac5b410d4c832053b39299  agent-core/src/main/java/dev/lifeagent/mcp/Htt
 
    与基线 **28 / 0 / 0 / Skipped 1** 逐项一致。
 
-3. `git diff --stat`：仅 `HttpTransportTest.java`（130 insertions / 4 deletions）与
-   `SELF-REVIEW-P1-3.md`（16 insertions / 8 deletions）；`HttpTransport.java` 无 diff。
+3. `git diff --stat`：仅 `HttpTransportTest.java`（126 insertions / 4 deletions）与
+   `SELF-REVIEW-P1-3.md`（12 insertions / 4 deletions）；`HttpTransport.java` 无 diff。
 
 ## 七、遗留问题
 

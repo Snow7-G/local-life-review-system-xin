@@ -41,24 +41,47 @@ class HttpTransportTest {
     private static final ObjectMapper TEST_MAPPER = new ObjectMapper();
 
     /**
-     * Shape of the fake server's response to a {@code notifications/*} request.
+     * Framing the fake server's 2xx answer to a {@code notifications/*} request takes on the wire.
      *
-     * <p>{@code explicitContentLength} reproduces the difference between a 202 that simply
-     * carries no body and a 202 that spells out {@code Content-Length: 0}.
+     * <p>Measured on JDK 21.0.12.1 with a raw-socket probe: {@code sendResponseHeaders(202, -1)}
+     * does <em>not</em> produce a 202 without framing headers — the JDK writes
+     * {@code Content-Length: 0} itself, so setting that header by hand before the call emits the
+     * byte-identical response. A 202 that really carries no {@code Content-Length} is only reachable
+     * through {@code sendResponseHeaders(202, 0)}, which switches the response to
+     * {@code Transfer-Encoding: chunked} with an empty chunked body.
+     *
+     * <p>Each constant therefore names exactly one of the three genuinely different shapes this
+     * server can put on the wire, and declares the framing the handler must observe after
+     * {@code sendResponseHeaders(...)} returned.
      */
     private enum NotifyResponse {
-        ACCEPTED_WITHOUT_BODY(202, -1, false),
-        ACCEPTED_ZERO_LENGTH(202, -1, true),
-        NO_CONTENT(204, -1, false);
+        /** {@code 202} framed by a JDK-written {@code Content-Length: 0}. */
+        ACCEPTED_WITH_CONTENT_LENGTH_ZERO(202, -1, "0", null),
+        /** {@code 202} framed by {@code Transfer-Encoding: chunked}, no {@code Content-Length}. */
+        ACCEPTED_CHUNKED_WITHOUT_CONTENT_LENGTH(202, 0, null, "chunked"),
+        /**
+         * {@code 204}: no body allowed, so neither {@code Content-Length} nor
+         * {@code Transfer-Encoding} is present.
+         */
+        NO_CONTENT(204, -1, null, null);
 
         private final int status;
         private final long bodyLength;
-        private final boolean explicitContentLength;
+        private final String expectedContentLength;
+        private final String expectedTransferEncoding;
 
-        NotifyResponse(int status, long bodyLength, boolean explicitContentLength) {
+        NotifyResponse(int status, long bodyLength, String expectedContentLength,
+                String expectedTransferEncoding) {
             this.status = status;
             this.bodyLength = bodyLength;
-            this.explicitContentLength = explicitContentLength;
+            this.expectedContentLength = expectedContentLength;
+            this.expectedTransferEncoding = expectedTransferEncoding;
+        }
+
+        /** Framing this shape must show in the headers the handler observes after sending it. */
+        private String expectedFraming() {
+            return status + " content-length=" + expectedContentLength
+                    + " transfer-encoding=" + expectedTransferEncoding;
         }
     }
 
@@ -161,33 +184,77 @@ class HttpTransportTest {
 
     @Test
     void rehandshakeAfterExpiredSessionSendsNoStaleSessionIdAndRecovers() throws Exception {
-        try (FakeHttpMcpServer server = new FakeHttpMcpServer();
-             McpClient client = server.newClient(Duration.ofMillis(50))) {
-            assertThrows(McpUnavailableException.class,
-                    () -> client.callTool("expire_session", Map.of(), CALL_TIMEOUT));
-            assertEquals(1, initializeRequests(server).size());
+        try (FakeHttpMcpServer server = new FakeHttpMcpServer()) {
+            server.issueSessionIds(FakeHttpMcpServer.SESSION_ID,
+                    FakeHttpMcpServer.RENEWED_SESSION_ID);
 
-            await(() -> initializeRequests(server).size() >= 2, Duration.ofSeconds(5));
-            RequestRecord rehandshake = initializeRequests(server).get(1);
-            assertNull(rehandshake.sessionId(),
-                    "re-handshake must not replay the expired Mcp-Session-Id");
+            try (McpClient client = server.newClient(Duration.ofMillis(50))) {
+                // the constructor handshake is synchronous, so the count is deterministic here;
+                // it must be checked BEFORE the 404, whose 50ms retry would otherwise race it
+                assertEquals(1, initializeRequests(server).size(),
+                        "the initial handshake must have completed exactly once");
 
-            assertEquals(2, initializeRequests(server).size(),
-                    "the recovered handshake must reach the server exactly once more");
-            await(client::isAvailable, Duration.ofSeconds(5));
-            assertTrue(client.isAvailable());
+                assertThrows(McpUnavailableException.class,
+                        () -> client.callTool("expire_session", Map.of(), CALL_TIMEOUT));
 
-            JsonNode result = client.callTool("json", Map.of("value", "after-rehandshake"),
-                    CALL_TIMEOUT);
-            assertEquals("after-rehandshake", result.path("arguments").path("value").asText());
-            assertTrue(server.requests().stream()
-                    .filter(request -> !"initialize".equals(request.method()))
-                    .allMatch(request -> request.sessionId() == null
-                            || FakeHttpMcpServer.SESSION_ID.equals(request.sessionId())));
-            assertTrue(server.requests().stream()
-                    .filter(request -> "tools/call".equals(request.method()))
-                    .anyMatch(request -> FakeHttpMcpServer.SESSION_ID.equals(request.sessionId())),
-                    "the recovered call must carry the session id issued by the re-handshake");
+                await(() -> initializeRequests(server).size() >= 2, Duration.ofSeconds(5));
+                RequestRecord rehandshake = initializeRequests(server).get(1);
+                assertNull(rehandshake.sessionId(),
+                        "re-handshake must not replay the expired Mcp-Session-Id");
+
+                await(client::isAvailable, Duration.ofSeconds(5));
+                assertTrue(client.isAvailable());
+                assertEquals(
+                        List.of(FakeHttpMcpServer.SESSION_ID,
+                                FakeHttpMcpServer.RENEWED_SESSION_ID),
+                        server.issuedSessionIds(),
+                        "the recovery handshake must issue a session id different from the expired"
+                                + " one");
+                assertEquals(2, initializeRequests(server).size(),
+                        "the recovered handshake must reach the server exactly once more");
+
+                JsonNode result = client.callTool("json", Map.of("value", "after-rehandshake"),
+                        CALL_TIMEOUT);
+                assertEquals("after-rehandshake",
+                        result.path("arguments").path("value").asText());
+
+                // non-vacuous phase split: everything the first session sent must carry the expired
+                // id, everything sent after the recovery handshake the NEW id. An "either id matches"
+                // check is satisfied by the pre-recovery calls alone and would prove nothing.
+                List<RequestRecord> requests = server.requests();
+                int secondHandshake = 0;
+                for (int index = 0, seen = 0; index < requests.size(); index++) {
+                    if ("initialize".equals(requests.get(index).method()) && ++seen == 2) {
+                        secondHandshake = index;
+                        break;
+                    }
+                }
+                List<RequestRecord> beforeRecovery = requests.subList(0, secondHandshake);
+                List<RequestRecord> afterRecovery =
+                        requests.subList(secondHandshake + 1, requests.size());
+                assertTrue(beforeRecovery.stream()
+                        .filter(request -> !"initialize".equals(request.method()))
+                        .allMatch(request -> FakeHttpMcpServer.SESSION_ID
+                                .equals(request.sessionId())),
+                        "requests before the recovery handshake must carry the expired id: "
+                                + beforeRecovery);
+                assertTrue(afterRecovery.stream()
+                        .allMatch(request -> FakeHttpMcpServer.RENEWED_SESSION_ID
+                                .equals(request.sessionId())),
+                        "requests after the recovery handshake must carry the NEW id: "
+                                + afterRecovery);
+
+                List<RequestRecord> toolCalls = server.requests().stream()
+                        .filter(request -> "tools/call".equals(request.method()))
+                        .toList();
+                assertEquals(2, toolCalls.size(),
+                        "expected exactly the call that expired the session and the recovered call");
+                assertEquals(FakeHttpMcpServer.SESSION_ID, toolCalls.get(0).sessionId(),
+                        "the call that expired the session must carry the first session id");
+                assertEquals(FakeHttpMcpServer.RENEWED_SESSION_ID, toolCalls.get(1).sessionId(),
+                        "the recovered call must carry the NEW session id issued by the"
+                                + " re-handshake");
+            }
         }
     }
 
@@ -202,14 +269,46 @@ class HttpTransportTest {
             server.resetNotifyObservation();
 
             assertDoesNotThrow(() -> server.notifyTransport()
-                    .notify("notifications/list_changed",
+                    .notify(FakeHttpMcpServer.LIST_CHANGED_NOTIFICATION,
                             TEST_MAPPER.createObjectNode()));
+            // the handler records the framing after sendResponseHeaders returns, possibly after
+            // notify(...) came back: wait for the record instead of assuming it is already there
+            await(server::notifyObservationRecorded, Duration.ofSeconds(2));
 
-            assertEquals("notifications/list_changed", server.notifyMethod(),
+            assertEquals(response.expectedFraming(), server.observedNotifyFraming(),
+                    "the notify response did not reach the wire with the declared framing");
+            assertEquals(FakeHttpMcpServer.LIST_CHANGED_NOTIFICATION, server.notifyMethod(),
                     "fixture never observed the notification reach the fake server");
             assertTrue(server.notifyTransport().isRunning());
             assertTrue(client.isAvailable());
             client.callTool("json", Map.of("value", "after-notify"), CALL_TIMEOUT);
+        }
+    }
+
+    @Test
+    void notifyResponseShapesDifferOnTheWire() throws Exception {
+        try (FakeHttpMcpServer server = new FakeHttpMcpServer();
+             McpClient client = server.newClient()) {
+            List<String> observedFramings = new ArrayList<>();
+            for (NotifyResponse response : NotifyResponse.values()) {
+                server.setNotifyResponse(response);
+                server.resetNotifyObservation();
+
+                assertDoesNotThrow(() -> server.notifyTransport()
+                        .notify(FakeHttpMcpServer.LIST_CHANGED_NOTIFICATION,
+                                TEST_MAPPER.createObjectNode()));
+                await(server::notifyObservationRecorded, Duration.ofSeconds(2));
+
+                assertEquals(response.expectedFraming(), server.observedNotifyFraming(),
+                        response + " did not reach the wire with the declared framing");
+                observedFramings.add(server.observedNotifyFraming());
+            }
+
+            assertEquals(NotifyResponse.values().length,
+                    observedFramings.stream().distinct().count(),
+                    "the notify response shapes must not collapse into fewer wire shapes: "
+                            + observedFramings);
+            assertTrue(client.isAvailable());
         }
     }
 
@@ -278,8 +377,15 @@ class HttpTransportTest {
     private static final class FakeHttpMcpServer implements AutoCloseable {
 
         private static final ObjectMapper MAPPER = new ObjectMapper();
+        /** Session id issued by handshakes unless a test configures a sequence. */
         private static final String SESSION_ID = "session-local-life-1";
+        /** Session id the recovery handshake of the re-handshake test is issued. */
+        private static final String RENEWED_SESSION_ID = "session-local-life-2";
         private static final String PROTOCOL_VERSION = "2025-06-18";
+        /** Marks a response header the handler never got to observe. */
+        private static final String NEVER_OBSERVED = "<never observed>";
+        /** The notification the notify tests make the transport post. */
+        private static final String LIST_CHANGED_NOTIFICATION = "notifications/list_changed";
 
         private final HttpServer server;
         private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -293,8 +399,27 @@ class HttpTransportTest {
                 new java.util.concurrent.atomic.AtomicBoolean();
         private final java.util.concurrent.atomic.AtomicReference<String> notifyMethod =
                 new java.util.concurrent.atomic.AtomicReference<>();
-        private volatile NotifyResponse notifyResponse = NotifyResponse.ACCEPTED_WITHOUT_BODY;
+        private volatile NotifyResponse notifyResponse =
+                NotifyResponse.ACCEPTED_WITH_CONTENT_LENGTH_ZERO;
         private volatile McpTransport notifyTransport;
+        /** Session ids the handshakes issue, in order; the last one repeats. */
+        private volatile List<String> sessionIdsToIssue = List.of(SESSION_ID);
+        private final List<String> handedOutSessionIds = new CopyOnWriteArrayList<>();
+        private final java.util.concurrent.atomic.AtomicInteger handshakes =
+                new java.util.concurrent.atomic.AtomicInteger();
+        /**
+         * One record per notification this fixture served, holding the framing the JDK wrote. Keyed
+         * by notification method, so the handshake's own {@code notifications/initialized} can never
+         * be taken for the notification under test. The record is appended AFTER
+         * {@code sendResponseHeaders} returns - which is also the moment the client may already have
+         * read the headers and returned, so tests must await {@link #notifyObservationRecorded()}
+         * rather than assume the handler has finished.
+         */
+        private record NotificationObservation(String method, String framing) {
+        }
+
+        private final List<NotificationObservation> notifyObservations =
+                new CopyOnWriteArrayList<>();
 
         private FakeHttpMcpServer() throws IOException {
             server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -327,12 +452,32 @@ class HttpTransportTest {
             return new McpClient(config, transport);
         }
 
+        /** Makes consecutive handshakes issue these session ids in order (the last repeats). */
+        private void issueSessionIds(String... sessionIds) {
+            this.sessionIdsToIssue = List.of(sessionIds);
+            this.handshakes.set(0);
+            this.handedOutSessionIds.clear();
+        }
+
+        private String issueSessionId() {
+            List<String> ids = sessionIdsToIssue;
+            String issued = ids.get(Math.min(handshakes.getAndIncrement(), ids.size() - 1));
+            handedOutSessionIds.add(issued);
+            return issued;
+        }
+
+        /** Session ids actually handed out by handshakes, in order. */
+        private List<String> issuedSessionIds() {
+            return List.copyOf(handedOutSessionIds);
+        }
+
         private void setNotifyResponse(NotifyResponse notifyResponse) {
             this.notifyResponse = notifyResponse;
         }
 
         private void resetNotifyObservation() {
             this.notifyMethod.set(null);
+            this.notifyObservations.clear();
         }
 
         private McpTransport notifyTransport() {
@@ -343,6 +488,27 @@ class HttpTransportTest {
             return notifyMethod.get();
         }
 
+        /**
+         * Framing the handler observed in the headers of the notification under test, or
+         * {@link #NEVER_OBSERVED} while the handler has not recorded it yet.
+         */
+        private String observedNotifyFraming() {
+            return observedNotifyFraming(LIST_CHANGED_NOTIFICATION);
+        }
+
+        private String observedNotifyFraming(String method) {
+            for (NotificationObservation observation : notifyObservations) {
+                if (method.equals(observation.method())) {
+                    return observation.framing();
+                }
+            }
+            return NEVER_OBSERVED;
+        }
+
+        /** Readiness signal for the tests: the notification under test has been recorded. */
+        private boolean notifyObservationRecorded() {
+            return !NEVER_OBSERVED.equals(observedNotifyFraming());
+        }
         private void handle(HttpExchange exchange) throws IOException {
             try (exchange) {
                 JsonNode request = MAPPER.readTree(exchange.getRequestBody());
@@ -360,15 +526,20 @@ class HttpTransportTest {
                     result.set("capabilities", MAPPER.createObjectNode());
                     result.set("serverInfo", MAPPER.createObjectNode()
                             .put("name", "fake-http").put("version", "1"));
-                    exchange.getResponseHeaders().set("Mcp-Session-Id", SESSION_ID);
+                    exchange.getResponseHeaders()
+                            .set("Mcp-Session-Id", issueSessionId());
                     sendJson(exchange, request.get("id"), result);
                 } else if (method != null && method.startsWith("notifications/")) {
                     notifyMethod.set(method);
                     NotifyResponse response = notifyResponse;
-                    if (response.explicitContentLength) {
-                        exchange.getResponseHeaders().set("Content-Length", "0");
-                    }
                     exchange.sendResponseHeaders(response.status, response.bodyLength);
+                    // only read the framing headers AFTER the call: the JDK writes
+                    // Content-Length / Transfer-encoding itself, so they describe the real wire shape
+                    notifyObservations.add(new NotificationObservation(method,
+                            response.status + " content-length="
+                                    + exchange.getResponseHeaders().getFirst("Content-Length")
+                                    + " transfer-encoding="
+                                    + exchange.getResponseHeaders().getFirst("Transfer-Encoding")));
                 } else if ("tools/list".equals(method)) {
                     sendJson(exchange, request.get("id"), toolsList());
                 } else if ("tools/call".equals(method)) {

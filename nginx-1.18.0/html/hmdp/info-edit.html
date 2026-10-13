@@ -23,75 +23,24 @@
     <div class="info-box">
       <div class="info-item">
         <div class="info-label">头像</div>
-        <div class="info-btn">
+        <div class="info-btn" @click="$refs.avatar.click()">
           <img width="35" :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
           <div><i class="el-icon-arrow-right"></i></div>
         </div>
+        <input ref="avatar" type="file" accept="image/jpeg,image/png,image/gif" hidden @change="uploadAvatar">
       </div>
       <div class="divider"></div>
       <div class="info-item">
         <div class="info-label">昵称</div>
-        <div class="info-btn">
-          <div>{{user.nickName}}</div>
-          <div>
-            <i class="el-icon-arrow-right"></i>
-          </div>
-        </div>
+        <el-input v-model="user.nickName" maxlength="32" style="width: 65%"></el-input>
       </div>
       <div class="divider"></div>
       <div class="info-item">
         <div class="info-label">个人介绍</div>
-        <div class="info-btn">
-          <div style="overflow: hidden; width: 150px;text-align: right">{{info.introduce || '介绍一下自己'}}</div>
-          <div>
-            <i class="el-icon-arrow-right"></i>
-          </div>
-        </div>
+        <el-input v-model="info.introduce" maxlength="128" placeholder="介绍一下自己" style="width: 65%"></el-input>
       </div>
     </div>
-    <div class="info-box">
-      <div class="info-item">
-        <div class="info-label">性别</div>
-        <div class="info-btn">
-          <div>{{info.gender || '选择'}}</div>
-          <div><i class="el-icon-arrow-right"></i></div>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div class="info-item">
-        <div class="info-label">城市</div>
-        <div class="info-btn">
-          <div>{{info.city || '选择'}}</div>
-          <div><i class="el-icon-arrow-right"></i></div>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div class="info-item">
-        <div class="info-label">生日</div>
-        <div class="info-btn">
-          <div>{{info.birthday || '添加'}}</div>
-          <div><i class="el-icon-arrow-right"></i></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="info-box">
-      <div class="info-item">
-        <div class="info-label">我的积分</div>
-        <div class="info-btn">
-          <div>查看积分</div>
-          <div><i class="el-icon-arrow-right"></i></div>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div class="info-item">
-        <div class="info-label">会员等级</div>
-        <div class="info-btn">
-          <div><a href="javascript:void(0)">成为VIP尊享特权</a></div>
-          <div><i class="el-icon-arrow-right"></i></div>
-        </div>
-      </div>
-    </div>
+    <el-button type="primary" :loading="saving" @click="saveProfile" style="margin: 20px; width: calc(100% - 40px)">保存资料</el-button>
   </div>
   <foot-bar :active-btn="4"></foot-bar>
 </div>
@@ -106,8 +55,9 @@
   const app = new Vue({
     el: "#app",
     data: {
-      user: "",
+      user: {},
       info: {},
+      saving: false,
     },
     created() {
       this.checkLogin();
@@ -118,12 +68,37 @@
         axios.get("/user/me")
         .then(({data}) => {
           this.user = data;
-          this.info = JSON.parse(sessionStorage.getItem("userInfo")) || {}
+          return axios.get("/user/info/" + data.id)
+        })
+        .then(({data}) => {
+          this.info = data || {}
         })
         .catch(err => {
           this.$message.error(err);
           setTimeout(() => location.href = "login.html", 1000)
         })
+      },
+      uploadAvatar(event) {
+        const file = event.target.files[0]
+        if (!file) return
+        const form = new FormData()
+        form.append("file", file)
+        axios.post("/upload/blog", form)
+          .then(({data}) => this.user.icon = "/imgs" + data)
+          .catch(err => this.$message.error(err))
+      },
+      saveProfile() {
+        this.saving = true
+        axios.put("/user/me", {
+          nickName: this.user.nickName,
+          icon: this.user.icon || "",
+          introduce: this.info.introduce || ""
+        }).then(() => {
+          sessionStorage.removeItem("userInfo")
+          this.$message.success("资料已保存")
+          setTimeout(() => location.href = "info.html", 500)
+        }).catch(err => this.$message.error(err))
+          .finally(() => this.saving = false)
       },
       goBack(){
         history.back();

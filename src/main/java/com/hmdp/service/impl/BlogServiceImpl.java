@@ -21,6 +21,7 @@ import org.owasp.html.HtmlPolicyBuilder;
 import org.owasp.html.PolicyFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -30,7 +31,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.hmdp.utils.RedisConstants.BLOG_LIKED_KEY;
 import static com.hmdp.utils.RedisConstants.FEED_KEY;
 
 /**
@@ -51,6 +51,10 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
     private StringRedisTemplate stringRedisTemplate;
     @Resource
     private IFollowService followService;
+    @Resource
+    private JdbcTemplate jdbc;
+    @Resource
+    private BlogLikePersistenceService likePersistence;
     @Override
     public Result queryById(Long id) {
         //查询blog
@@ -74,10 +78,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
             return;
         }
         Long userId = user.getId();
-        String key = BLOG_LIKED_KEY + blog.getId();
-        //2，判断用户是否点过赞
-        Double score = stringRedisTemplate.opsForZSet().score(key, userId.toString());
-        blog.setIsLike(score != null);
+        blog.setIsLike(likePersistence.isLiked(blog.getId(), userId));
     }
 
     private void queryUser(Blog blog) {
@@ -105,40 +106,16 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
 //笔记点赞情况
     @Override
     public Result updateBlogLike(Long id) {
-        //1，获取用户id
         Long userId = UserHolder.getUser().getId();
-        String key = BLOG_LIKED_KEY+ id;
-        //2，判断用户是否点过赞
-        Double score = stringRedisTemplate.opsForZSet().score(key, userId.toString());
-        if(score == null){
-            //2.1 未点赞
-            //2,2 将数据库点赞数加一
-            boolean success = update().setSql("liked = liked + 1").eq("id", id).update();
-            //2.3 将这个用户添加到redis
-            if(success){
-                stringRedisTemplate.opsForZSet().add(key,userId.toString(),System.currentTimeMillis());
-            }
-        }else{
-            //3,已点赞
-            //3.1 将数据库点赞数-1
-            boolean success = update().setSql("liked = liked - 1").eq("id", id).update();
-            //3.2 将这个用户从redis中删除
-            if(success){
-                stringRedisTemplate.opsForZSet().remove(key,userId.toString());
-            }
-        }
+        try { likePersistence.toggle(id, userId); }
+        catch (IllegalArgumentException missing) { return Result.fail("笔记不存在"); }
         return Result.ok();
     }
     //点赞排序
     @Override
     public Result queryLikes(Long id) {
-        //从redis取出用户id
-        Set<String> top5 = stringRedisTemplate.opsForZSet().range(BLOG_LIKED_KEY + id, 0, 4);
-        if(top5 == null || top5.isEmpty()){
-            return Result.ok();
-        }
-        List<Long> ids = top5.stream().map(Long::valueOf)
-                .collect(Collectors.toList());
+        List<Long> ids = likePersistence.topLikers(id);
+        if (ids.isEmpty()) return Result.ok(java.util.Collections.emptyList());
         //将id集合拼接成字符串
         String idStr = StrUtil.join(",", ids);
         //根据用户id查找出用户 in(5,1) order by filter(id,1,5)
@@ -179,6 +156,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         //获得登录用户id
         Long userId = UserHolder.getUser().getId();
         String key = FEED_KEY + userId;
+        if (Boolean.FALSE.equals(stringRedisTemplate.hasKey(key))) rebuildFeed(userId);
         //根据id查询收件箱的笔记id和时间戳
         Set<ZSetOperations.TypedTuple<String>> typedTuples = stringRedisTemplate.opsForZSet().reverseRangeByScoreWithScores(key, 0, max, offset, 2);
         if(typedTuples == null || typedTuples.isEmpty()){
@@ -215,6 +193,15 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         scrollResult.setOffset(os);
         scrollResult.setMinTime(minTime);
         return Result.ok(scrollResult);
+    }
+
+    void rebuildFeed(Long userId) {
+        jdbc.query("SELECT DISTINCT b.id, b.create_time FROM tb_blog b " +
+                "JOIN tb_follow f ON b.user_id = f.follow_user_id " +
+                "WHERE f.user_id = ? AND b.create_time >= f.create_time",
+                (org.springframework.jdbc.core.RowCallbackHandler) rs -> stringRedisTemplate.opsForZSet().add(
+                        FEED_KEY + userId, String.valueOf(rs.getLong("id")),
+                        rs.getTimestamp("create_time").getTime()), userId);
     }
 
     static String sanitizeContent(String content) {

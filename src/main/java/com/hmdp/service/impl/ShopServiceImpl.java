@@ -210,13 +210,22 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     }
 //根据距离查询店铺信息
     @Override
-    public Result quaryByShop(Integer typeId, Integer current, Double x, Double y) {
+    public Result quaryByShop(Integer typeId, Integer current, Double x, Double y, String sortBy) {
+        if (typeId == null || typeId <= 0 || current == null || current <= 0
+                || sortBy == null || !"".equals(sortBy) && !"comments".equals(sortBy) && !"score".equals(sortBy)
+                || x != null && (!Double.isFinite(x) || x < -180 || x > 180)
+                || y != null && (!Double.isFinite(y) || y < -85.05112878 || y > 85.05112878)) {
+            return Result.fail("查询参数不正确");
+        }
         //1,判断是否根据距离查询
-        if(x == null || y == null){
+        if(x == null || y == null || !sortBy.isEmpty()
+                || Boolean.FALSE.equals(stringRedisTemplate.hasKey(SHOP_GEO_KEY + typeId))){
             //否，则按照原本数据库查询
             // 根据类型分页查询
             Page<Shop> page = query()
                     .eq("type_id", typeId)
+                    .orderByDesc(!sortBy.isEmpty(), sortBy.isEmpty() ? "id" : sortBy)
+                    .orderByAsc("id")
                     .page(new Page<>(current, SystemConstants.DEFAULT_PAGE_SIZE));
             return Result.ok(page.getRecords());
         }
@@ -229,15 +238,15 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         GeoResults<RedisGeoCommands.GeoLocation<String>> results = stringRedisTemplate.opsForGeo()  // GEOSEARCH key BYLONLAT x y RADIUS 5000 WITHDISTANCE
                 .search(key, GeoReference.fromCoordinate(x, y),
                         new Distance(5000),
-                        RedisGeoCommands.GeoSearchCommandArgs.newGeoSearchArgs().includeDistance().limit(end)
+                        RedisGeoCommands.GeoSearchCommandArgs.newGeoSearchArgs().includeDistance().sortAscending().limit(end)
                 );
         //解析出id
         if(results == null){
-            return Result.ok();
+            return Result.ok(java.util.Collections.emptyList());
         }
         List<GeoResult<RedisGeoCommands.GeoLocation<String>>> list = results.getContent();
         if(list.size() <= from){
-            return Result.ok();
+            return Result.ok(java.util.Collections.emptyList());
         }
         //截取分页
         List<Long> ids = new ArrayList<>(list.size());
@@ -252,7 +261,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         });
         //根据id查询店铺信息
         String idStr = StrUtil.join(",",ids);
-        List<Shop> shops = query().in("id", ids).last("ORDER BY FIELD (id," + idStr + ")").list();
+        List<Shop> shops = query().eq("type_id", typeId).in("id", ids).last("ORDER BY FIELD (id," + idStr + ")").list();
         for (Shop shop : shops) {
             shop.setDistance(map.get(shop.getId().toString()).getValue());
         }

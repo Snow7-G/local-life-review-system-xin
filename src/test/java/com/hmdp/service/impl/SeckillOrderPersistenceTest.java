@@ -16,6 +16,10 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -52,6 +56,33 @@ class SeckillOrderPersistenceTest {
 
         assertThrows(DataIntegrityViolationException.class, () -> service.persist(collidingId));
         assertEquals(2, jdbc.queryForObject("SELECT stock FROM tb_seckill_voucher WHERE voucher_id=9", Integer.class));
+    }
+
+    @Test
+    void concurrentOrdersCannotOversell() throws Exception {
+        jdbc.update("UPDATE tb_seckill_voucher SET stock = 1 WHERE voucher_id = 9");
+        ExecutorService workers = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<Boolean> first = workers.submit(() -> placeAfter(start, 101L, 7L));
+            Future<Boolean> second = workers.submit(() -> placeAfter(start, 102L, 8L));
+            start.countDown();
+            assertEquals(1, (first.get() ? 1 : 0) + (second.get() ? 1 : 0));
+            assertEquals(0, jdbc.queryForObject("SELECT stock FROM tb_seckill_voucher WHERE voucher_id=9", Integer.class));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM tb_voucher_order", Integer.class));
+        } finally {
+            workers.shutdownNow();
+        }
+    }
+
+    private boolean placeAfter(CountDownLatch start, long id, long userId) throws InterruptedException {
+        start.await();
+        try {
+            service.persist(new VoucherOrder().setId(id).setUserId(userId).setVoucherId(9L));
+            return true;
+        } catch (IllegalStateException soldOut) {
+            return false;
+        }
     }
 
     @Configuration

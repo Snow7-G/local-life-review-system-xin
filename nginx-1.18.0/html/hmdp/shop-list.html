@@ -36,7 +36,7 @@
         </el-dropdown-menu>
       </el-dropdown>
     </div>
-    <div class="sort-item" @click="sortAndQuery('')">
+    <div class="sort-item" @click="sortAndQuery('distance')">
       距离 <i class="el-icon-arrow-down el-icon--right"></i>
     </div>
     <div class="sort-item" @click="sortAndQuery('comments')">
@@ -83,7 +83,9 @@
     el: "#app",
     data: {
       util,
-      isReachBottom: false,
+      loading: false,
+      hasMore: true,
+      queryVersion: 0,
       types: [], // 类型列表
       shops: [], // 商店列表
       typeName: "",
@@ -91,8 +93,8 @@
         typeId: 0,
         current: 1,
         sortBy: "",
-        x: 120.149993, // 经度
-        y: 30.334229 // 纬度
+        x: null,
+        y: null
       }
     },
     created() {
@@ -102,7 +104,15 @@
       // 查询类型
       this.queryTypes();
       // 查询商店
-      this.queryShops();
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          this.params.x = position.coords.longitude
+          this.params.y = position.coords.latitude
+          this.queryShops()
+        }, () => this.queryShops(), {timeout: 3000, maximumAge: 60000})
+      } else {
+        this.queryShops()
+      }
     },
     methods: {
       queryTypes() {
@@ -116,26 +126,39 @@
           })
       },
       queryShops() {
+        if (this.loading || !this.hasMore) return
+        this.loading = true
+        const version = this.queryVersion
         axios.get("/shop/of/type", {
-            params: this.params
+            params: Object.assign({}, this.params)
           })
           .then(({data}) => {
-            if (!data) {
-              return
-            }
+            if (version !== this.queryVersion) return
+            if (!data || data.length < 5) this.hasMore = false
+            if (!data) return
             data.forEach(s => s.images = s.images.split(',')[0]);
             this.shops = this.shops.concat(data);
           })
           .catch(err => {
+            if (version !== this.queryVersion) return
             console.log(err);
             this.$message.error(err)
           })
+          .finally(() => { if (version === this.queryVersion) this.loading = false })
       },
       handleCommand(t) {
         location.href = "/shop-list.html?type="+t.id+"&name="+t.name;
       },
       sortAndQuery(sortBy) {
-        this.params.sortBy = sortBy;
+        if (sortBy === 'distance' && (this.params.x == null || this.params.y == null)) {
+          this.$message.info('未获得位置，显示普通分类列表')
+        }
+        this.params.sortBy = sortBy === 'distance' ? '' : sortBy;
+        this.params.current = 1;
+        this.shops = [];
+        this.hasMore = true;
+        this.loading = false;
+        this.queryVersion++;
         this.queryShops();
       },
       goBack() {
@@ -148,13 +171,9 @@
         let scrollTop = e.target.scrollTop;
         let offsetHeight = e.target.offsetHeight;
         let scrollHeight = e.target.scrollHeight;
-        if(scrollTop + offsetHeight + 1 > scrollHeight && !this.isReachBottom){
-          this.isReachBottom = true
-          console.log("触底")
+        if(scrollTop + offsetHeight + 1 > scrollHeight && !this.loading && this.hasMore){
           this.params.current++
-          this.queryShops(this.params.current, 5);
-        }else{
-          this.isReachBottom = false
+          this.queryShops();
         }
       },
     }

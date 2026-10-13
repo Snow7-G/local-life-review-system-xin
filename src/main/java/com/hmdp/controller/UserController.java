@@ -4,6 +4,7 @@ package com.hmdp.controller;
 import cn.hutool.core.bean.BeanUtil;
 import com.hmdp.dto.LoginFormDTO;
 import com.hmdp.dto.Result;
+import com.hmdp.dto.UpdateProfileDTO;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.User;
 import com.hmdp.entity.UserInfo;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.hmdp.utils.RedisConstants.LOGIN_USER_KEY;
 
@@ -52,7 +55,7 @@ public class UserController {
 
     /**
      * 登录功能
-     * @param loginForm 登录参数，包含手机号、验证码；或者手机号、密码
+     * @param loginForm 登录参数，包含手机号、验证码
      */
     @PostMapping("/login")
     public Result login(@RequestBody LoginFormDTO loginForm){
@@ -75,6 +78,20 @@ public class UserController {
         //  获取当前登录的用户并返回
         UserDTO user = UserHolder.getUser();
         return Result.ok(user);
+    }
+
+    @PutMapping("/me")
+    public Result updateMe(@RequestBody UpdateProfileDTO profile, HttpServletRequest request) {
+        Result result = userService.updateProfile(profile);
+        if (Boolean.TRUE.equals(result.getSuccess())) {
+            UserDTO updated = (UserDTO) result.getData();
+            Map<String, String> fields = new HashMap<>();
+            fields.put("nickName", updated.getNickName());
+            fields.put("icon", updated.getIcon());
+            stringRedisTemplate.opsForHash().putAll(LOGIN_USER_KEY + request.getHeader("authorization"), fields);
+            UserHolder.saveUser(updated);
+        }
+        return result;
     }
 
     @GetMapping("/info/{id}")

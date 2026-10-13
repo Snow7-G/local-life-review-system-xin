@@ -1282,4 +1282,13 @@ CREATE TABLE `tb_voucher_order`  (
 -- Records of tb_voucher_order
 -- ----------------------------
 
+DROP TABLE IF EXISTS `tb_blog_like`;
+CREATE TABLE `tb_blog_like` (
+  `blog_id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`blog_id`, `user_id`),
+  KEY `idx_blog_like_time` (`blog_id`, `create_time`, `user_id`)
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

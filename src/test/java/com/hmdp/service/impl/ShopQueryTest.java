@@ -32,9 +32,26 @@ class ShopQueryTest {
             return page;
         });
 
-        Result result = service.quaryByShop(2, 1, null, null);
+        Result result = service.quaryByShop(2, 1, null, null, "");
 
         assertEquals(Collections.singletonList(shop), result.getData());
         verifyNoInteractions(redis);
+    }
+
+    @Test
+    void popularitySortUsesDatabaseColumnWhitelist() {
+        ShopMapper mapper = mock(ShopMapper.class);
+        ShopServiceImpl service = new ShopServiceImpl();
+        ReflectionTestUtils.setField(service, "baseMapper", mapper);
+        when(mapper.selectPage(any(IPage.class), any(Wrapper.class))).thenAnswer(invocation -> {
+            IPage<Shop> page = invocation.getArgument(0);
+            Wrapper<Shop> query = invocation.getArgument(1);
+            assertEquals(true, query.getSqlSegment().contains("comments DESC"));
+            page.setRecords(Collections.emptyList());
+            return page;
+        });
+
+        assertEquals(Collections.emptyList(), service.quaryByShop(2, 1, null, null, "comments").getData());
+        assertEquals(false, service.quaryByShop(2, 1, null, null, "comments;DROP TABLE tb_shop").getSuccess());
     }
 }

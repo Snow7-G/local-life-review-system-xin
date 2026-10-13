@@ -6,10 +6,13 @@ import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.LoginFormDTO;
 import com.hmdp.dto.Result;
+import com.hmdp.dto.UpdateProfileDTO;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.User;
+import com.hmdp.entity.UserInfo;
 import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
+import com.hmdp.service.IUserInfoService;
 import com.hmdp.utils.RegexUtils;
 import com.hmdp.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
@@ -53,6 +57,42 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     private String demoPhone;
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private IUserInfoService userInfoService;
+
+    @Override
+    @Transactional
+    public Result updateProfile(UpdateProfileDTO profile) {
+        if (profile == null || profile.getNickName() == null || profile.getNickName().trim().isEmpty()
+                || profile.getNickName().trim().length() > 32
+                || profile.getIntroduce() != null && profile.getIntroduce().length() > 128) {
+            return Result.fail("昵称或个人介绍格式不正确");
+        }
+        String icon = profile.getIcon();
+        if (icon != null && !icon.isEmpty()
+                && !icon.matches("/imgs/blogs/(?:[0-9]|1[0-5])/(?:[0-9]|1[0-5])/[0-9a-fA-F-]{36}\\.(jpg|jpeg|png|gif)")) {
+            return Result.fail("头像路径不合法");
+        }
+        Long userId = UserHolder.getUser().getId();
+        User user = new User().setId(userId).setNickName(profile.getNickName().trim());
+        user.setIcon(icon == null ? UserHolder.getUser().getIcon() : icon);
+        if (!updateById(user)) throw new IllegalStateException("用户资料保存失败");
+        if (profile.getIntroduce() != null) {
+            UserInfo info = userInfoService.getById(userId);
+            if (info == null) {
+                info = new UserInfo().setUserId(userId).setIntroduce(profile.getIntroduce());
+                if (!userInfoService.save(info)) throw new IllegalStateException("个人介绍保存失败");
+            } else {
+                info.setIntroduce(profile.getIntroduce());
+                if (!userInfoService.updateById(info)) throw new IllegalStateException("个人介绍保存失败");
+            }
+        }
+        UserDTO updated = new UserDTO();
+        updated.setId(userId);
+        updated.setNickName(user.getNickName());
+        updated.setIcon(user.getIcon() == null ? "" : user.getIcon());
+        return Result.ok(updated);
+    }
     @Override
     public Result setPhone(String phone) {
         //1,判断手机号码是否合法

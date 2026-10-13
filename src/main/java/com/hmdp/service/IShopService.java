@@ -16,5 +16,5 @@ public interface IShopService extends IService<Shop> {
 
     void update(Shop shop);
 
-    Result quaryByShop(Integer typeId, Integer current, Double x, Double y);
+    Result quaryByShop(Integer typeId, Integer current, Double x, Double y, String sortBy);
 }

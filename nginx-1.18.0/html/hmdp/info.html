@@ -42,7 +42,6 @@
     </div>
     <div class="basic-info">
       <div class="name">{{user.nickName}}</div>
-      <span>杭州</span>
       <div class="edit-btn" @click="toEdit">
         编辑资料
       </div>
@@ -52,7 +51,7 @@
     </div>
   </div>
   <div class="introduce">
-    <span v-if="info.introduce"></span>
+    <span v-if="info.introduce">{{info.introduce}}</span>
     <span v-else>添加个人简介，让大家更好的认识你 <i class="el-icon-edit"></i></span>
   </div>
   <div class="content">
@@ -63,13 +62,10 @@
           <div class="blog-info">
             <div class="blog-title">{{b.title}}</div>
             <div class="blog-liked"><img src="/imgs/thumbup.png" alt=""> {{b.liked}}</div>
-            <div class="blog-comments"><i class="el-icon-chat-dot-round"></i> {{b.comments}}</div>
           </div>
         </div>
       </el-tab-pane>
-      <el-tab-pane label="评价" name="2">评价</el-tab-pane>
-      <el-tab-pane label="粉丝(0)" name="3">粉丝(0)</el-tab-pane>
-      <el-tab-pane label="关注(0)" name="4">
+      <el-tab-pane label="关注动态" name="4">
         <div class="blog-list" @scroll="onScroll">
           <div class="blog-box" v-for="b in blogs2" :key="b.id">
             <div class="blog-img2" @click="toBlogDetail(b)"><img :src="b.img" alt=""></div>

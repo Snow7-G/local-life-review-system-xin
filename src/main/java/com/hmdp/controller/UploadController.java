@@ -2,16 +2,17 @@ package com.hmdp.controller;
 
 import cn.hutool.core.util.StrUtil;
 import com.hmdp.dto.Result;
-import com.hmdp.utils.SystemConstants;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.UUID;
@@ -21,6 +22,8 @@ import java.util.UUID;
 @RequestMapping("upload")
 public class UploadController {
     private static final long MAX_IMAGE_SIZE = 1024 * 1024;
+    @Value("${HMDP_IMAGE_UPLOAD_DIR:./nginx-1.18.0/html/hmdp/imgs}")
+    private String imageUploadDir;
 
     @PostMapping("blog")
     public Result uploadImage(@RequestParam("file") MultipartFile image) {
@@ -34,7 +37,9 @@ public class UploadController {
             // 生成新文件名
             String fileName = createNewFileName(originalFilename);
             // 保存文件
-            image.transferTo(new File(SystemConstants.IMAGE_UPLOAD_DIR, fileName));
+            Path target = Path.of(imageUploadDir).resolve(fileName.substring(1));
+            Files.createDirectories(target.getParent());
+            image.transferTo(target.toFile());
             // 返回结果
             log.debug("文件上传成功，{}", fileName);
             return Result.ok(fileName);
@@ -67,17 +72,12 @@ public class UploadController {
 
     private String createNewFileName(String originalFilename) {
         // 获取后缀
-        String suffix = StrUtil.subAfter(originalFilename, ".", true);
+        String suffix = StrUtil.subAfter(originalFilename, ".", true).toLowerCase(Locale.ROOT);
         // 生成目录
         String name = UUID.randomUUID().toString();
         int hash = name.hashCode();
         int d1 = hash & 0xF;
         int d2 = (hash >> 4) & 0xF;
-        // 判断目录是否存在
-        File dir = new File(SystemConstants.IMAGE_UPLOAD_DIR, StrUtil.format("/blogs/{}/{}", d1, d2));
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
         // 生成文件名
         return StrUtil.format("/blogs/{}/{}/{}.{}", d1, d2, name, suffix);
     }

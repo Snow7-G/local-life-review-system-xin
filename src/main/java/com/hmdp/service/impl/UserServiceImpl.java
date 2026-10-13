@@ -49,6 +49,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             //2,不合法，返回错误信息
             return Result.fail("手机号不合法，请重新输入");
         }
+          String  limitKey =  LOGIN_CODE_LIMIT_TTL + phone;
+        Boolean cansend = stringRedisTemplate.opsForValue().setIfAbsent(limitKey, "1", LOGIN_CODE_TTL, TimeUnit.SECONDS);
+        if(!cansend){
+            return Result.fail("请求过于频繁，请60秒后再试");
+        }
 
         //3,合法，生成验证码
         String code = RandomUtil.randomNumbers(6);
@@ -156,6 +161,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             num >>>= 1;
         }
         return Result.ok(count);
+    }
+//登出功能
+    @Override
+    public Result unLogin(String token) {
+        String key = LOGIN_USER_KEY + token;
+        if(token == null){
+            return Result.fail("未登录");
+        }
+        stringRedisTemplate.delete(key);
+        UserHolder.removeUser();
+        return Result.ok("登出成功");
     }
 
     private User createUser(String phone) {

@@ -16,6 +16,8 @@ public class MvcConfig implements WebMvcConfigurer {
     private StringRedisTemplate stringRedisTemplate;
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        //第一个拦截器，主要是刷新token有效期
+        registry.addInterceptor(new ReFreshIntecepor(stringRedisTemplate)).order(0);
         //第二个拦截器，决定是否放行
         registry.addInterceptor(new LoginIntercepor())
                 .excludePathPatterns(
@@ -28,7 +30,6 @@ public class MvcConfig implements WebMvcConfigurer {
 
 
                 ).order(1);
-        //第一个拦截器，主要是刷新token有效期
-        registry.addInterceptor(new ReFreshIntecepor(stringRedisTemplate)).order(0);
+
     }
 }

@@ -105,7 +105,9 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     }
 
     private void createPendingOrder() {
-        while (true){
+        int retryCount = 0;
+        int maxRetry = 5; // 最多重试5次，避免死循环
+        while (retryCount < maxRetry){
             //获取队列中的订单信息
             try {
                 //获取消息队列的订单信息 XREADGROUP GROUP  g1 c1 COUNT 1 BLACK 2000 STREAMS stream.orders 0
@@ -204,7 +206,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 //    }
     @Transactional
     public void createVoucherOrder(VoucherOrder voucherOrder){
-        Long userId = voucherOrder.getId();
+        Long userId = voucherOrder.getUserId();
         //判断改用户是否已经下过单
         int count = query().eq("user_id", userId)
                 .eq("voucher_id", voucherOrder.getVoucherId()).count();

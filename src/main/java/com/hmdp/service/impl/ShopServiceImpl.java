@@ -59,13 +59,6 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     private CacheClient cacheClient;
     @Override
     public Result quaryById(Long id) {
-        // ========== 新增：布隆过滤器拦截 ==========
-//        // 先判断这个ID是否可能在数据库中存在
-//        if (!BloomFilterInitializer.mightExist(id)) {
-//            // 一定不存在，直接返回失败，不查缓存、不查数据库
-//            log.info("布隆过滤器拦截非法ID: {}", id);
-//            return Result.fail("商铺不存在");
-//        }
         //缓存穿透代码调用
         Shop shop = cacheClient.quaryWithPathThrough(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
        //缓存击穿代码调用

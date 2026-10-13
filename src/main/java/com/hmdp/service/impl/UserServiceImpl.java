@@ -15,6 +15,9 @@ import com.hmdp.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.BitFieldSubCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -23,6 +26,7 @@ import javax.servlet.http.HttpSession;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -40,6 +44,13 @@ import static com.hmdp.utils.SystemConstants.USER_NICK_NAME_PREFIX;
 @Service
 @Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
+    private static final DefaultRedisScript<Long> CONSUME_CODE_SCRIPT = new DefaultRedisScript<>();
+    static {
+        CONSUME_CODE_SCRIPT.setLocation(new ClassPathResource("consumeLoginCode.lua"));
+        CONSUME_CODE_SCRIPT.setResultType(Long.class);
+    }
+    @Value("${HMDP_DEMO_PHONE:}")
+    private String demoPhone;
     @Resource
     private StringRedisTemplate stringRedisTemplate;
     @Override
@@ -49,9 +60,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             //2,不合法，返回错误信息
             return Result.fail("手机号不合法，请重新输入");
         }
-          String  limitKey =  LOGIN_CODE_LIMIT_TTL + phone;
-        Boolean cansend = stringRedisTemplate.opsForValue().setIfAbsent(limitKey, "1", LOGIN_CODE_TTL, TimeUnit.SECONDS);
-        if(!cansend){
+        if (!phone.equals(demoPhone)) {
+            return Result.fail("短信服务尚未接入，请使用已配置的演示手机号");
+        }
+          String  limitKey =  LOGIN_CODE_LIMIT_KEY + phone;
+        Boolean cansend = stringRedisTemplate.opsForValue().setIfAbsent(limitKey, "1", LOGIN_CODE_LIMIT_TTL, TimeUnit.SECONDS);
+        if(!Boolean.TRUE.equals(cansend)){
             return Result.fail("请求过于频繁，请60秒后再试");
         }
 
@@ -60,9 +74,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         //4，将验证码放到redis里面
         stringRedisTemplate.opsForValue().set(LOGIN_CODE_KEY + phone,code,LOGIN_CODE_TTL, TimeUnit.MINUTES);
         //5，发送验证码
-        log.info("验证码已发送成功，{}",code);
-        //6,返回发送成功信息
-        return Result.ok();
+        // 仅向明确配置的演示手机号返回验证码；生产短信服务尚未接入
+        return Result.ok(code);
     }
 //登录功能
     @Override
@@ -73,14 +86,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             //2,不合法，返回错误信息
             return Result.fail("手机号不合法，请重新输入");
         }
-        //2,判断验证码是否一样
-            //2.1 获取用户输入的验证码
         String codeUser = loginForm.getCode();
-            //2.2 获取redis中正确的验证码
-        String code = stringRedisTemplate.opsForValue().get(LOGIN_CODE_KEY + phone);
-        if(codeUser == null || !codeUser.equals(code)){
-            //3，不一样，返回错误信息
+        if (RegexUtils.isCodeInvalid(codeUser)) {
             return Result.fail("验证码错误");
+        }
+        Long codeResult = stringRedisTemplate.execute(CONSUME_CODE_SCRIPT,
+                Arrays.asList(LOGIN_CODE_KEY + phone, LOGIN_CODE_ATTEMPTS_KEY + phone),
+                codeUser, String.valueOf(LOGIN_CODE_MAX_ATTEMPTS), String.valueOf(LOGIN_CODE_TTL * 60));
+        if (Long.valueOf(-2).equals(codeResult)) {
+            return Result.fail("验证码尝试次数过多，请稍后重试");
+        }
+        if (!Long.valueOf(1).equals(codeResult)) {
+            return Result.fail("验证码错误或已失效");
         }
         //4,一样，查询用户是否存在
         User user = query().eq("phone", phone).one();

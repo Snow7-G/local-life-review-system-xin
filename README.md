@@ -1,5 +1,7 @@
 # 本地生活服务系统
 
+新环境启动、跨平台 Nginx 用法、自动测试和人工验收步骤见 [部署与验收](docs/deployment.md)。
+
 后端使用 MySQL 和 Redis。启动前在运行环境或 IDE 的运行配置中设置
 `HMDP_DB_URL`、`HMDP_DB_USERNAME`、`HMDP_DB_PASSWORD`。
 Redis 使用 `HMDP_REDIS_HOST`、`HMDP_REDIS_PORT` 和 `HMDP_REDIS_PASSWORD`；

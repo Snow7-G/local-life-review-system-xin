@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y redis-server nginx
+      - name: Check frontend request handling
+        run: node tests/common.test.cjs
+      - name: Check Nginx configuration
+        run: |
+          mkdir -p nginx-1.18.0/logs
+          nginx -t -p "$GITHUB_WORKSPACE/nginx-1.18.0/" -c conf/nginx.conf
+      - name: Build and run tests
+        run: mvn -B -ntp verify

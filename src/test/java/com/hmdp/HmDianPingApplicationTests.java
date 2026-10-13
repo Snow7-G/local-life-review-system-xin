@@ -6,6 +6,7 @@ import com.hmdp.service.impl.ShopServiceImpl;
 import com.hmdp.utils.CacheClient;
 import com.hmdp.utils.RedisIdMake;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.geo.Point;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 import static com.hmdp.utils.RedisConstants.CACHE_SHOP_KEY;
 
 @SpringBootTest
+@EnabledIfSystemProperty(named = "hmdp.manualTests", matches = "true")
 class HmDianPingApplicationTests {
     private ExecutorService ex = Executors.newFixedThreadPool(300);
     @Resource

@@ -13,6 +13,7 @@ import javax.imageio.stream.ImageInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.UUID;
@@ -37,7 +38,7 @@ public class UploadController {
             // 生成新文件名
             String fileName = createNewFileName(originalFilename);
             // 保存文件
-            Path target = Path.of(imageUploadDir).resolve(fileName.substring(1));
+            Path target = Paths.get(imageUploadDir).resolve(fileName.substring(1));
             Files.createDirectories(target.getParent());
             image.transferTo(target.toFile());
             // 返回结果

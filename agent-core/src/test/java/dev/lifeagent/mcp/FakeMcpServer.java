@@ -12,6 +12,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.List;
+import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -22,11 +24,25 @@ public final class FakeMcpServer {
     private static final Object STDOUT_LOCK = new Object();
     private static final CountDownLatch FIVE_CONCURRENT_CALLS = new CountDownLatch(5);
 
+    /**
+     * stderr flood scale: the server writes exactly this many bytes to stderr, with one '\n' as the
+     * last byte of every {@link #FLOOD_LINE_BYTES} block. McpClientTest derives its lower bound from
+     * these same two numbers, so the fixture and the assertion cannot drift apart silently.
+     */
+    static final int FLOOD_BYTES = 5 * 1024 * 1024;
+    /** Length of one flood line, including its trailing '\n'. */
+    static final int FLOOD_LINE_BYTES = 1_024;
+    /** Server argument carrying the parent environment variable the child must not be able to see. */
+    static final String SENTINEL_ARGUMENT_PREFIX = "env-sentinel=";
+    /** Server argument carrying the variable the client injects through its configuration. */
+    static final String INJECTED_ARGUMENT_PREFIX = "env-injected=";
+
     private FakeMcpServer() {
     }
 
     public static void main(String[] args) throws Exception {
-        boolean badTools = Arrays.asList(args).contains("bad-tools");
+        List<String> serverArguments = Arrays.asList(args);
+        boolean badTools = serverArguments.contains("bad-tools");
         ExecutorService calls = Executors.newCachedThreadPool();
         boolean initialized = false;
         try (BufferedReader input = new BufferedReader(
@@ -53,7 +69,7 @@ public final class FakeMcpServer {
                     }
                 } else if ("tools/call".equals(method)) {
                     JsonNode copy = message.deepCopy();
-                    calls.submit(() -> handleToolCall(copy));
+                    calls.submit(() -> handleToolCall(copy, serverArguments));
                 }
             }
         } finally {
@@ -75,7 +91,7 @@ public final class FakeMcpServer {
         return MAPPER.createObjectNode().set("tools", tools);
     }
 
-    private static void handleToolCall(JsonNode request) {
+    private static void handleToolCall(JsonNode request, List<String> serverArguments) {
         try {
             JsonNode id = request.get("id");
             JsonNode params = request.path("params");
@@ -93,8 +109,9 @@ public final class FakeMcpServer {
                     return;
                 }
                 case "die" -> Runtime.getRuntime().halt(17);
+                case "dump_env" -> respond(id, environmentReport(serverArguments));
                 case "stderr_flood" -> {
-                    floodStderr(5 * 1024 * 1024);
+                    floodStderr(FLOOD_BYTES);
                     respond(id, MAPPER.createObjectNode().put("ok", true));
                 }
                 case "unicode" -> respondWithSplitUtf8(id, arguments.path("text").asText());
@@ -116,8 +133,38 @@ public final class FakeMcpServer {
         }
     }
 
+    /**
+     * Reports what this child process can actually see in its own environment. The isolation test
+     * asserts on this self-evidence from the child side, so it verifies the real absence of inherited
+     * variables rather than the mere fact that {@code ProcessBuilder.environment().clear()} was called.
+     */
+    private static ObjectNode environmentReport(List<String> serverArguments) {
+        ObjectNode report = MAPPER.createObjectNode();
+        ArrayNode keys = report.putArray("envKeys");
+        new TreeSet<>(System.getenv().keySet()).forEach(keys::add);
+
+        String sentinel = argumentValue(serverArguments, SENTINEL_ARGUMENT_PREFIX);
+        report.put("sentinelName", sentinel == null ? "" : sentinel);
+        report.put("sentinelPresent", sentinel != null && System.getenv().containsKey(sentinel));
+
+        String injected = argumentValue(serverArguments, INJECTED_ARGUMENT_PREFIX);
+        String injectedValue = injected == null ? null : System.getenv().get(injected);
+        report.put("injectedName", injected == null ? "" : injected);
+        report.put("injectedPresent", injectedValue != null);
+        report.put("injectedValue", injectedValue == null ? "" : injectedValue);
+        return report;
+    }
+
+    private static String argumentValue(List<String> serverArguments, String prefix) {
+        return serverArguments.stream()
+                .filter(argument -> argument.startsWith(prefix))
+                .map(argument -> argument.substring(prefix.length()))
+                .findFirst()
+                .orElse(null);
+    }
+
     private static void floodStderr(int byteCount) throws IOException {
-        byte[] line = new byte[1_024];
+        byte[] line = new byte[FLOOD_LINE_BYTES];
         Arrays.fill(line, (byte) 'x');
         line[line.length - 1] = '\n';
         int written = 0;

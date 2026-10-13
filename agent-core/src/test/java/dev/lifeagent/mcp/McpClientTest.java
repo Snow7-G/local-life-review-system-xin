@@ -8,11 +8,14 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 
@@ -25,6 +28,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class McpClientTest {
 
     private static final Duration CALL_TIMEOUT = Duration.ofSeconds(5);
+
+    /** Environment variable injected into the child through {@code config.environment()}. */
+    private static final String INJECTED_ENV_NAME = "MCP_CHILD_INJECTED_SENTINEL";
+    private static final String INJECTED_ENV_VALUE = "injected-by-config";
+
+    /**
+     * Lower bound on the characters a correct stderr drain must forward during the flood.
+     *
+     * <p>The fixture writes {@code FLOOD_BYTES = 5 * 1024 * 1024 = 5_242_880} bytes and places one
+     * {@code '\n'} as the last byte of every {@code FLOOD_LINE_BYTES = 1_024} block, so the stream
+     * carries {@code 5_242_880 / 1_024 = 5_120} lines. {@link java.io.BufferedReader#readLine()}
+     * consumes the line terminator without returning it, so each line contributes 1_023 characters
+     * to the logger and the most a correct client can ever log is
+     * {@code 5_120 * 1_023 = 5_237_760} characters - exactly 5_120 short of 5 MiB. Asserting
+     * {@code >= 5 MiB} would therefore reject a fully correct implementation, while the previous
+     * {@code > 4 MiB} bound accepts a drain that silently drops a fifth of the flood.
+     */
+    private static final long FLOOD_MAX_LOGGED_CHARS =
+            (long) (FakeMcpServer.FLOOD_BYTES / FakeMcpServer.FLOOD_LINE_BYTES)
+                    * (FakeMcpServer.FLOOD_LINE_BYTES - 1);
 
     @Test
     void handshakeCachesToolsListSchema() {
@@ -57,7 +80,7 @@ class McpClientTest {
     }
 
     @Test
-    void stderrFloodOfFiveMegabytesDoesNotBlockToolCall() {
+    void stderrFloodOfFiveMegabytesDoesNotBlockToolCall() throws Exception {
         AtomicLong loggedCharacters = new AtomicLong();
         McpClientConfig.Builder config = builder()
                 .stderrLogger(line -> loggedCharacters.addAndGet(line.length()));
@@ -65,8 +88,91 @@ class McpClientTest {
             JsonNode result = client.callTool("stderr_flood", Map.of(), Duration.ofSeconds(15));
 
             assertTrue(result.path("ok").asBoolean());
-            assertTrue(loggedCharacters.get() > 4L * 1024 * 1024,
-                    "the dedicated stderr thread must drain and forward the flood");
+            assertEquals(5_237_760L, FLOOD_MAX_LOGGED_CHARS,
+                    "5_242_880 bytes / 1_024 bytes per line * 1_023 returned characters per line");
+            await(() -> loggedCharacters.get() >= FLOOD_MAX_LOGGED_CHARS, Duration.ofSeconds(30));
+            assertTrue(loggedCharacters.get() >= FLOOD_MAX_LOGGED_CHARS,
+                    "the dedicated stderr thread must drain and forward the whole flood, expected at least "
+                            + FLOOD_MAX_LOGGED_CHARS + " characters, got " + loggedCharacters.get());
+        }
+    }
+    @Test
+    void childEnvironmentIsIsolatedFromTheParentByDefault() {
+        String sentinel = parentEnvironmentSentinel();
+        McpClientConfig.Builder config = builder(
+                        FakeMcpServer.SENTINEL_ARGUMENT_PREFIX + sentinel,
+                        FakeMcpServer.INJECTED_ARGUMENT_PREFIX + INJECTED_ENV_NAME)
+                .environment(Map.of(INJECTED_ENV_NAME, INJECTED_ENV_VALUE));
+
+        try (McpClient client = newClient(config)) {
+            JsonNode report = client.callTool("dump_env", Map.of(), CALL_TIMEOUT);
+
+            // The child reports its own System.getenv(), so the evidence below comes from inside the
+            // child process: it shows what the MCP server could really have read, not merely that
+            // ProcessBuilder.environment().clear() was invoked.
+            Set<String> childKeys = envKeys(report);
+            assertEquals(sentinel, report.path("sentinelName").asText(),
+                    "the fixture must have been told which variable to look for");
+            assertFalse(report.path("sentinelPresent").asBoolean(),
+                    "the child must not see the parent variable " + sentinel);
+            assertEquals(Set.of(INJECTED_ENV_NAME), childKeys,
+                    "the child environment must contain exactly the configured entries, but the child saw "
+                            + childKeys);
+            assertTrue(report.path("injectedPresent").asBoolean(),
+                    "configured entries must reach the child environment");
+            assertEquals(INJECTED_ENV_VALUE, report.path("injectedValue").asText());
+        }
+    }
+
+    @Test
+    void optingInToParentInheritanceMakesTheParentEnvironmentVisibleToTheChild() {
+        // Positive control for the test above: the very same sentinel must appear once inheritance is
+        // requested, which proves that its absence there is real isolation rather than an artifact of
+        // the child being unable to report its environment at all.
+        String sentinel = parentEnvironmentSentinel();
+        McpClientConfig.Builder config = builder(
+                        FakeMcpServer.SENTINEL_ARGUMENT_PREFIX + sentinel,
+                        FakeMcpServer.INJECTED_ARGUMENT_PREFIX + INJECTED_ENV_NAME)
+                .environment(Map.of(INJECTED_ENV_NAME, INJECTED_ENV_VALUE))
+                .inheritParentEnvironment(true);
+
+        try (McpClient client = newClient(config)) {
+            JsonNode report = client.callTool("dump_env", Map.of(), CALL_TIMEOUT);
+
+            assertTrue(report.path("sentinelPresent").asBoolean(),
+                    "opt-in inheritance must expose the parent variable " + sentinel);
+            assertTrue(envKeys(report).contains(sentinel));
+            assertEquals(INJECTED_ENV_VALUE, report.path("injectedValue").asText(),
+                    "configured entries must win over the inherited environment");
+        }
+    }
+
+    @Test
+    void stderrLoggerFailureDoesNotStopTheDrain() throws Exception {
+        AtomicLong loggedCharacters = new AtomicLong();
+        AtomicInteger loggerCalls = new AtomicInteger();
+        AtomicInteger failures = new AtomicInteger();
+        McpClientConfig.Builder config = builder().stderrLogger(line -> {
+            // Count before throwing: the measurement must not depend on the deliberate failure.
+            loggedCharacters.addAndGet(line.length());
+            if (loggerCalls.incrementAndGet() == 3) {
+                failures.incrementAndGet();
+                throw new IllegalStateException("stderr sink is broken on purpose");
+            }
+        });
+
+        try (McpClient client = newClient(config)) {
+            JsonNode result = client.callTool("stderr_flood", Map.of(), Duration.ofSeconds(15));
+
+            assertTrue(result.path("ok").asBoolean(),
+                    "a throwing stderr sink must not break the request/response path");
+            await(() -> loggedCharacters.get() >= FLOOD_MAX_LOGGED_CHARS, Duration.ofSeconds(30));
+            assertEquals(1, failures.get(), "the sink must have been given the chance to throw");
+            assertTrue(loggedCharacters.get() >= FLOOD_MAX_LOGGED_CHARS,
+                    "draining must continue past the failing line (line 3 of "
+                            + FakeMcpServer.FLOOD_BYTES / FakeMcpServer.FLOOD_LINE_BYTES
+                            + "), expected at least " + FLOOD_MAX_LOGGED_CHARS + " characters, got "
+                            + loggedCharacters.get());
         }
     }
 
@@ -168,6 +274,29 @@ class McpClientTest {
         return McpClientConfig.builder(command)
                 .handshakeTimeout(Duration.ofSeconds(5))
                 .restartBackoff(List.of(Duration.ofMillis(100), Duration.ofMillis(250)));
+    }
+
+    /**
+     * Names an environment variable that exists in this JVM, which is the parent of the MCP child.
+     *
+     * <p>A test cannot add variables to its own environment, so instead of exporting a sentinel the
+     * child is told which existing variable to look for and reports whether it can see it. {@code PATH}
+     * is preferred because it is present in essentially every launch environment; the test fails
+     * loudly rather than passing vacuously if this JVM has no environment at all.
+     */
+    private static String parentEnvironmentSentinel() {
+        Map<String, String> parentEnvironment = System.getenv();
+        assertFalse(parentEnvironment.isEmpty(),
+                "cannot prove isolation: this JVM has no environment to leak");
+        return parentEnvironment.containsKey("PATH")
+                ? "PATH"
+                : parentEnvironment.keySet().iterator().next();
+    }
+
+    private static Set<String> envKeys(JsonNode environmentReport) {
+        Set<String> keys = new TreeSet<>();
+        environmentReport.path("envKeys").forEach(key -> keys.add(key.asText()));
+        return keys;
     }
 
     private static long countThreads(String prefix) {

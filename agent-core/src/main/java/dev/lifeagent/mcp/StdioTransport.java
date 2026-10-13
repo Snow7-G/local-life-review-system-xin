@@ -69,7 +69,18 @@ public final class StdioTransport implements AutoCloseable {
 
             ProcessBuilder builder = new ProcessBuilder(config.command());
             builder.redirectErrorStream(false);
-            builder.environment().putAll(config.environment());
+            Map<String, String> childEnvironment = builder.environment();
+            if (config.inheritParentEnvironment()) {
+                // Opt-in: keep the parent environment and merge the configured entries on top of it.
+                childEnvironment.putAll(config.environment());
+            } else {
+                // Default: the MCP server is an external child process and this process environment
+                // routinely holds credentials (tokens, DB passwords, cloud keys). Start from an
+                // empty environment and inject only the entries the caller configured explicitly,
+                // so nothing else the parent happens to export can be read via System.getenv().
+                childEnvironment.clear();
+                childEnvironment.putAll(config.environment());
+            }
             try {
                 Process process = builder.start();
                 ProcessSession session = createSession(process);

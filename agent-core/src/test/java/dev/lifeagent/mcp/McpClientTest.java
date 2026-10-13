@@ -82,7 +82,7 @@ class McpClientTest {
     @Test
     void stderrFloodOfFiveMegabytesDoesNotBlockToolCall() throws Exception {
         AtomicLong loggedCharacters = new AtomicLong();
-        McpClientConfig.Builder config = builder()
+        TestClientBuilder config = builder()
                 .stderrLogger(line -> loggedCharacters.addAndGet(line.length()));
         try (McpClient client = newClient(config)) {
             JsonNode result = client.callTool("stderr_flood", Map.of(), Duration.ofSeconds(15));
@@ -99,7 +99,7 @@ class McpClientTest {
     @Test
     void childEnvironmentIsIsolatedFromTheParentByDefault() {
         String sentinel = parentEnvironmentSentinel();
-        McpClientConfig.Builder config = builder(
+        TestClientBuilder config = builder(
                         FakeMcpServer.SENTINEL_ARGUMENT_PREFIX + sentinel,
                         FakeMcpServer.INJECTED_ARGUMENT_PREFIX + INJECTED_ENV_NAME)
                 .environment(Map.of(INJECTED_ENV_NAME, INJECTED_ENV_VALUE));
@@ -130,7 +130,7 @@ class McpClientTest {
         // requested, which proves that its absence there is real isolation rather than an artifact of
         // the child being unable to report its environment at all.
         String sentinel = parentEnvironmentSentinel();
-        McpClientConfig.Builder config = builder(
+        TestClientBuilder config = builder(
                         FakeMcpServer.SENTINEL_ARGUMENT_PREFIX + sentinel,
                         FakeMcpServer.INJECTED_ARGUMENT_PREFIX + INJECTED_ENV_NAME)
                 .environment(Map.of(INJECTED_ENV_NAME, INJECTED_ENV_VALUE))
@@ -152,7 +152,7 @@ class McpClientTest {
         AtomicLong loggedCharacters = new AtomicLong();
         AtomicInteger loggerCalls = new AtomicInteger();
         AtomicInteger failures = new AtomicInteger();
-        McpClientConfig.Builder config = builder().stderrLogger(line -> {
+        TestClientBuilder config = builder().stderrLogger(line -> {
             // Count before throwing: the measurement must not depend on the deliberate failure.
             loggedCharacters.addAndGet(line.length());
             if (loggerCalls.incrementAndGet() == 3) {
@@ -190,7 +190,7 @@ class McpClientTest {
 
     @Test
     void childDeathMakesClientUnavailableAndCallsFailWithoutHanging() {
-        McpClientConfig.Builder config = builder()
+        TestClientBuilder config = builder()
                 .restartBackoff(List.of(Duration.ofSeconds(5)));
         try (McpClient client = newClient(config)) {
             assertThrows(McpUnavailableException.class,
@@ -232,7 +232,7 @@ class McpClientTest {
 
     @Test
     void consecutiveTimeoutsRestartProcessAndRepeatHandshake() throws Exception {
-        McpClientConfig.Builder config = builder()
+        TestClientBuilder config = builder()
                 .consecutiveTimeoutsBeforeRestart(2)
                 .restartBackoff(List.of(Duration.ofMillis(25)));
         try (McpClient client = newClient(config)) {
@@ -251,7 +251,7 @@ class McpClientTest {
 
     @Test
     void failedHandshakeLeavesClientUnavailable() {
-        McpClientConfig.Builder config = builder("bad-tools")
+        TestClientBuilder config = builder("bad-tools")
                 .restartBackoff(List.of(Duration.ofSeconds(5)));
         try (McpClient client = newClient(config)) {
             assertFalse(client.isAvailable());
@@ -260,20 +260,20 @@ class McpClientTest {
         }
     }
 
-    private static McpClient newClient(McpClientConfig.Builder builder) {
-        return new McpClient(builder.build());
+    private static McpClient newClient(TestClientBuilder builder) {
+        McpClientConfig clientConfig = builder.clientConfig.build();
+        return new McpClient(
+                clientConfig, new StdioTransport(builder.stdioConfig.build(), clientConfig));
     }
 
-    private static McpClientConfig.Builder builder(String... serverArguments) {
+    private static TestClientBuilder builder(String... serverArguments) {
         List<String> command = new ArrayList<>();
         command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
         command.add("-cp");
         command.add(System.getProperty("surefire.test.class.path", System.getProperty("java.class.path")));
         command.add(FakeMcpServer.class.getName());
         command.addAll(List.of(serverArguments));
-        return McpClientConfig.builder(command)
-                .handshakeTimeout(Duration.ofSeconds(5))
-                .restartBackoff(List.of(Duration.ofMillis(100), Duration.ofMillis(250)));
+        return new TestClientBuilder(command);
     }
 
     /**
@@ -312,5 +312,48 @@ class McpClientTest {
             Thread.sleep(20);
         }
         assertTrue(condition.getAsBoolean(), "condition was not met before " + timeout);
+    }
+
+    /** Keeps the existing tests' setup fluent while assembling the two split configurations. */
+    private static final class TestClientBuilder {
+
+        private final McpClientConfig.Builder clientConfig = McpClientConfig.builder()
+                .handshakeTimeout(Duration.ofSeconds(5))
+                .restartBackoff(List.of(Duration.ofMillis(100), Duration.ofMillis(250)));
+        private final StdioTransportConfig.Builder stdioConfig;
+
+        private TestClientBuilder(List<String> command) {
+            this.stdioConfig = StdioTransportConfig.builder(command);
+        }
+
+        private TestClientBuilder maxConcurrentRequests(int value) {
+            clientConfig.maxConcurrentRequests(value);
+            return this;
+        }
+
+        private TestClientBuilder restartBackoff(List<Duration> value) {
+            clientConfig.restartBackoff(value);
+            return this;
+        }
+
+        private TestClientBuilder consecutiveTimeoutsBeforeRestart(int value) {
+            clientConfig.consecutiveTimeoutsBeforeRestart(value);
+            return this;
+        }
+
+        private TestClientBuilder environment(Map<String, String> value) {
+            stdioConfig.environment(value);
+            return this;
+        }
+
+        private TestClientBuilder inheritParentEnvironment(boolean value) {
+            stdioConfig.inheritParentEnvironment(value);
+            return this;
+        }
+
+        private TestClientBuilder stderrLogger(java.util.function.Consumer<String> value) {
+            stdioConfig.stderrLogger(value);
+            return this;
+        }
     }
 }

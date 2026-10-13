@@ -26,38 +26,35 @@ import java.util.function.Consumer;
  * One-JSON-object-per-line transport over a managed child process. Responses are
  * dispatched by id, so callers may have multiple requests in flight at once.
  */
-public final class StdioTransport implements AutoCloseable {
-
-    @FunctionalInterface
-    interface TerminationListener {
-        void onTerminated(McpUnavailableException failure);
-    }
+public final class StdioTransport implements McpTransport, McpTransportFailureSource {
 
     private static final AtomicLong TRANSPORT_SEQUENCE = new AtomicLong();
 
-    private final McpClientConfig config;
+    private final StdioTransportConfig config;
+    private final McpClientConfig clientConfig;
     private final JsonRpcCodec codec;
-    private final TerminationListener terminationListener;
     private final Semaphore inFlight;
     private final ConcurrentHashMap<Long, PendingRequest> pending = new ConcurrentHashMap<>();
     private final AtomicLong requestIds = new AtomicLong();
     private final AtomicInteger consecutiveTimeouts = new AtomicInteger();
     private final AtomicReference<ProcessSession> activeSession = new AtomicReference<>();
+    private final AtomicReference<Consumer<McpUnavailableException>> failureListener =
+            new AtomicReference<>(ignored -> { });
     private final AtomicBoolean closed = new AtomicBoolean();
     private final ReentrantLock stdinLock = new ReentrantLock();
     private final Object lifecycleLock = new Object();
     private final String threadNamePrefix;
 
-    StdioTransport(McpClientConfig config, JsonRpcCodec codec,
-                   TerminationListener terminationListener) {
+    public StdioTransport(StdioTransportConfig config, McpClientConfig clientConfig) {
         this.config = Objects.requireNonNull(config, "config");
-        this.codec = Objects.requireNonNull(codec, "codec");
-        this.terminationListener = Objects.requireNonNull(terminationListener, "terminationListener");
-        this.inFlight = new Semaphore(config.maxConcurrentRequests(), true);
+        this.clientConfig = Objects.requireNonNull(clientConfig, "clientConfig");
+        this.codec = new JsonRpcCodec();
+        this.inFlight = new Semaphore(clientConfig.maxConcurrentRequests(), true);
         this.threadNamePrefix = "mcp-stdio-" + TRANSPORT_SEQUENCE.incrementAndGet() + "-";
     }
 
-    void start() {
+    @Override
+    public void start() {
         synchronized (lifecycleLock) {
             if (closed.get()) {
                 throw new McpUnavailableException("MCP transport is closed");
@@ -94,7 +91,8 @@ public final class StdioTransport implements AutoCloseable {
         }
     }
 
-    JsonNode request(String method, JsonNode params, Duration timeout) {
+    @Override
+    public JsonNode request(String method, JsonNode params, Duration timeout) {
         Objects.requireNonNull(method, "method");
         validateTimeout(timeout);
         long deadline = deadlineAfter(timeout);
@@ -139,29 +137,39 @@ public final class StdioTransport implements AutoCloseable {
         }
     }
 
-    void notify(String method, JsonNode params) {
+    @Override
+    public void notify(String method, JsonNode params) {
         Objects.requireNonNull(method, "method");
         write(liveSession(), new JsonRpcNotification(method, params));
     }
 
-    boolean isRunning() {
+    @Override
+    public boolean isRunning() {
         ProcessSession session = activeSession.get();
         return !closed.get() && session != null && session.process().isAlive();
     }
 
-    int pendingCount() {
+    @Override
+    public int pendingCount() {
         return pending.size();
     }
 
-    String threadNamePrefix() {
+    @Override
+    public String threadNamePrefix() {
         return threadNamePrefix;
     }
 
-    void failCurrent(String message, Throwable cause) {
+    @Override
+    public void failCurrent(String message, Throwable cause) {
         ProcessSession session = activeSession.get();
         if (session != null) {
             failSession(session, new McpUnavailableException(message, cause));
         }
+    }
+
+    @Override
+    public void onTransportFailure(Consumer<McpUnavailableException> listener) {
+        failureListener.set(Objects.requireNonNull(listener, "listener"));
     }
 
     private ProcessSession createSession(Process process) {
@@ -277,7 +285,8 @@ public final class StdioTransport implements AutoCloseable {
 
     private void recordTimeout(ProcessSession session) {
         if (activeSession.get() == session
-                && consecutiveTimeouts.incrementAndGet() >= config.consecutiveTimeoutsBeforeRestart()) {
+                && consecutiveTimeouts.incrementAndGet()
+                >= clientConfig.consecutiveTimeoutsBeforeRestart()) {
             failSession(session, new McpUnavailableException("MCP process exceeded consecutive timeout limit"));
         }
     }
@@ -289,7 +298,7 @@ public final class StdioTransport implements AutoCloseable {
         completePending(session, failure);
         shutdownSession(session);
         if (!closed.get()) {
-            terminationListener.onTerminated(failure);
+            failureListener.get().accept(failure);
         }
     }
 

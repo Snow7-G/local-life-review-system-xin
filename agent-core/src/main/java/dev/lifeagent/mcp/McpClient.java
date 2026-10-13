@@ -18,15 +18,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-/** High-level MCP client backed by a restartable stdio child process. */
+/** High-level MCP client backed by an injected, restartable transport. */
 public final class McpClient implements AutoCloseable {
 
     private static final AtomicLong CLIENT_SEQUENCE = new AtomicLong();
-
     private final McpClientConfig config;
     private final JsonRpcCodec codec;
     private final ObjectMapper mapper;
-    private final StdioTransport transport;
+    private final McpTransport transport;
     private final ScheduledExecutorService lifecycleExecutor;
     private final AtomicBoolean available = new AtomicBoolean();
     private final AtomicBoolean closed = new AtomicBoolean();
@@ -34,8 +33,9 @@ public final class McpClient implements AutoCloseable {
     private final AtomicInteger restartAttempt = new AtomicInteger();
     private volatile Map<String, JsonNode> toolSchemas = Map.of();
 
-    public McpClient(McpClientConfig config) {
+    public McpClient(McpClientConfig config, McpTransport transport) {
         this.config = Objects.requireNonNull(config, "config");
+        this.transport = Objects.requireNonNull(transport, "transport");
         this.codec = new JsonRpcCodec();
         this.mapper = codec.mapper();
         long clientId = CLIENT_SEQUENCE.incrementAndGet();
@@ -44,7 +44,9 @@ public final class McpClient implements AutoCloseable {
                         .name("mcp-client-" + clientId + "-lifecycle")
                         .daemon(true)
                         .unstarted(runnable));
-        this.transport = new StdioTransport(config, codec, this::onTransportTerminated);
+        if (transport instanceof McpTransportFailureSource failureSource) {
+            failureSource.onTransportFailure(ignored -> onTransportUnavailable());
+        }
         try {
             transport.start();
             performHandshake();
@@ -60,17 +62,34 @@ public final class McpClient implements AutoCloseable {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(args, "args");
         Objects.requireNonNull(timeout, "timeout");
-        if (!available.get() || closed.get()) {
+        if (!isAvailable()) {
             throw new McpUnavailableException("MCP client is unavailable");
         }
         ObjectNode params = mapper.createObjectNode();
         params.put("name", name);
         params.set("arguments", mapper.valueToTree(args));
-        return transport.request("tools/call", params, timeout);
+        try {
+            return transport.request("tools/call", params, timeout);
+        } catch (McpTimeoutException e) {
+            if (!transport.isRunning()) {
+                onTransportUnavailable();
+            }
+            throw e;
+        } catch (McpUnavailableException e) {
+            onTransportUnavailable();
+            throw e;
+        }
     }
 
     public boolean isAvailable() {
-        return !closed.get() && available.get() && transport.isRunning();
+        if (closed.get() || !available.get()) {
+            return false;
+        }
+        if (!transport.isRunning()) {
+            onTransportUnavailable();
+            return false;
+        }
+        return true;
     }
 
     public Optional<JsonNode> toolSchema(String name) {
@@ -115,7 +134,7 @@ public final class McpClient implements AutoCloseable {
         toolSchemas = Collections.unmodifiableMap(schemas);
     }
 
-    private void onTransportTerminated(McpUnavailableException ignored) {
+    private void onTransportUnavailable() {
         available.set(false);
         toolSchemas = Map.of();
         scheduleRestart();

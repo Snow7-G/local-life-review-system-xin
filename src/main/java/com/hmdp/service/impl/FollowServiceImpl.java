@@ -8,13 +8,13 @@ import com.hmdp.entity.Follow;
 import com.hmdp.entity.User;
 import com.hmdp.mapper.FollowMapper;
 import com.hmdp.service.IFollowService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.UserHolder;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -56,7 +56,8 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
         //1，获取登录用户id
         Long userId = UserHolder.getUser().getId();
         //2, 查看数据库是否有这个
-        Integer count = query().eq("user_id", userId).eq("follow_user_id", followUserId).count();
+        // MyBatis-Plus 3.5.x: count() 由 Integer 改为 Long
+        Long count = query().eq("user_id", userId).eq("follow_user_id", followUserId).count();
         return Result.ok(count > 0);
     }
 //实现共同关注

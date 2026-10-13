@@ -8,7 +8,7 @@ import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.sql.Timestamp;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;

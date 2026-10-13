@@ -1,6 +1,6 @@
 package com.hmdp.service.impl;
 
-import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
+import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
 import com.hmdp.entity.UserInfo;
 import com.hmdp.mapper.UserInfoMapper;
 import org.apache.ibatis.session.SqlSessionFactory;

@@ -23,7 +23,7 @@
     </div>
   </div>
   <div class="upload-box">
-    <input type="file" @change="fileSelected" name="file" ref="fileInput" style="display: none">
+    <input type="file" @change="fileSelected" name="file" ref="fileInput" accept="image/jpeg,image/png,image/gif" style="display: none">
     <div class="upload-btn" @click="openFileDialog">
       <i class="el-icon-camera"></i>
       <div style="font-size: 12px;line-height: 12px">上传照片</div>
@@ -129,9 +129,7 @@
           .catch(this.$message.error);
       },
       deletePic(i) {
-        axios.get("/upload/blog/delete?name=" + this.fileList[i])
-          .then(() => this.fileList.splice(i, 1))
-          .catch(this.$message.error)
+        this.fileList.splice(i, 1)
       },
       checkLogin() {
         // 获取token

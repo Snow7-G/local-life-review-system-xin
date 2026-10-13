@@ -82,8 +82,14 @@ public interface McpTransport extends AutoCloseable {
   - `Content-Type: application/json` → 直接解析单个 JSON-RPC 响应
   - `Content-Type: text/event-stream` → 逐 `data:` 行解析 SSE，**按 id 匹配**取回本次调用的响应；
     遇到不匹配 id 的事件要跳过而非报错（可能有通知或他人响应）
-- **会话管理**：`initialize` 的响应头若含 `Mcp-Session-Id`，后续请求必须带上；
-  服务端返回 `404` 表示会话失效 → 标记传输不可用并走既有重启/重握手路径。
+- **通知 / 响应的 POST**：按规范，输入是 JSON-RPC *通知* 或 *响应* 时，
+  服务端成功则回 **HTTP 202 Accepted 且无 body**；失败回 HTTP 错误码（body 可能是一个无 `id` 的
+  JSON-RPC 错误响应）。客户端的 `notify(...)`（如 `notifications/initialized`）**必须**正确处理
+  **空 body 的 202**——不许把空 body 当 JSON 解析，也不许因此判失败。
+- **会话管理**：`initialize` 的响应头若含 `Mcp-Session-Id`，后续所有请求必须带上。
+- **会话失效（404）**：按规范 **MUST 不带旧 session id 重新发 `InitializeRequest` 建新会话**。
+  ⚠️ 陷阱：若重握手时仍带着已失效的 session id，会陷入 404 死循环。实现必须显式清掉旧 id 再重握手，
+  并走既有重启/重握手路径；在旧会话失效到新会话建立之间，调用按降级失败处理而非挂起。
 - 与 stdio 一致的能力：**每调用超时**、**并发上限（信号量）**、**按 id 分发 pending**、
   **不可用时立即降级失败**、**`close()` 干净退出**。
 - 网络异常（连接拒绝、读超时）→ `McpUnavailableException`；HTTP 4xx/5xx 按可重试性区分，
@@ -99,16 +105,19 @@ public interface McpTransport extends AutoCloseable {
    两种形态都能正确取回结果。
 4. 并发：≥3 个调用同时在途，各自拿到自己的结果（id 不错配）。
 5. 超时：服务端故意不回 → `McpTimeoutException`，且 pending 被清理。
-6. 会话失效：服务端对已失效会话回 `404` → 传输变为不可用，调用降级失败而非挂起。
-7. `close()` 后无残留线程、且后续调用被拒绝。
-8. HTTP 侧的 UTF-8 中文/emoji 往返正确。
+6. 会话失效：服务端对已失效会话回 `404` → 客户端**不带旧 session id** 重新 `initialize` 建新会话
+   （断言重握手请求里**没有** `Mcp-Session-Id` 头，否则会 404 死循环）；
+   在重建完成前调用降级失败而非挂起。
+7. `notify(...)` 路径：服务端回 **202 且空 body** → 客户端不报错（不把空 body 当 JSON 解析）。
+8. `close()` 后无残留线程、且后续调用被拒绝。
+9. HTTP 侧的 UTF-8 中文/emoji 往返正确。
 
 ## 验收命令
 
 ```bash
 cd /root/projects/llrs-audit
 export MAVEN_OPTS="-Xmx640m"
-mvn -f agent-core/pom.xml -B -ntp test     # 必须 BUILD SUCCESS；测试数 ≥ 22（原 14 + HTTP 侧 ≥8）
+mvn -f agent-core/pom.xml -B -ntp test     # 必须 BUILD SUCCESS；测试数 ≥ 23（原 14 + HTTP 侧 ≥9）
 # 回归：基线不许被碰坏
 mvn -B -ntp verify                          # 仍须 28 tests 全绿
 ```

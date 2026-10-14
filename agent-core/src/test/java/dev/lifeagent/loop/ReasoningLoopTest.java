@@ -75,7 +75,8 @@ class ReasoningLoopTest {
     @Test
     void oneSuccessResetsTheConsecutiveFailureCount() {
         ProbeTools probe = new ProbeTools();
-        probe.flakyWriteFailuresAlreadyServed = 2; // calls 1 and 2 fail, call 3 succeeds
+        probe.flakyWriteFailuresAlreadyServed = 2; // calls 1 and 2 fail
+        probe.flakyWriteFailOn.add(4);             // call 4 fails again, after the success on call 3
         ScriptedLlm llm = new ScriptedLlm(List.of(
                 ScriptedLlm.wantsTools(LoopHarness.flakyWrite("c1")),
                 ScriptedLlm.wantsTools(LoopHarness.flakyWrite("c2")),
@@ -89,7 +90,10 @@ class ReasoningLoopTest {
 
         assertEquals(LoopStopReason.ANSWERED, result.stopReason());
         assertEquals(5, probe.flakyWriteCalls.get(),
-                "after the success on call 3 the count resets, so call 5 is still entered");
+                "the success on call 3 must clear the count: without the reset the breaker would open "
+                        + "on call 4 and call 5 would never be entered");
+        assertFalse(toolResult(llm.lastRequest().messages(), "c5").isError(),
+                "call 5 was entered and succeeded");
     }
 
     /** Mandatory 1: the write path keeps the same breaker semantics as before. */
@@ -214,6 +218,26 @@ class ReasoningLoopTest {
                 "an Error from a tool must never escape run()");
         assertEquals(1, probe.errorCalls.get());
         ToolResultBlock failed = toolResult(llm.lastRequest().messages(), "call-e");
+        assertTrue(failed.isError());
+        assertTrue(failed.content().asText().contains("AssertionError"),
+                "the failure names the throwable: " + failed.content().asText());
+    }
+
+    /** Mandatory Q3 fix: the WRITE path must contain an Error from the tool just like the read path. */
+    @Test
+    void aWriteToolThrowingAnErrorAlsoBecomesAFailedResultNotAnException() {
+        ProbeTools probe = new ProbeTools();
+        ScriptedLlm llm = new ScriptedLlm(List.of(
+                ScriptedLlm.wantsTools(LoopHarness.writeError("call-we")),
+                ScriptedLlm.answer("换个方式")));
+
+        LoopResult result = LoopHarness.loop(llm, LoopHarness.registry(probe), ALLOW_ALL)
+                .run(LoopHarness.config("s-werror", "开始", LoopBudget.defaults()));
+
+        assertEquals(LoopStopReason.ANSWERED, result.stopReason(),
+                "an Error from a write tool must never escape run() either");
+        assertEquals(1, probe.writeErrorCalls.get(), "the write probe ran exactly once");
+        ToolResultBlock failed = toolResult(llm.lastRequest().messages(), "call-we");
         assertTrue(failed.isError());
         assertTrue(failed.content().asText().contains("AssertionError"),
                 "the failure names the throwable: " + failed.content().asText());

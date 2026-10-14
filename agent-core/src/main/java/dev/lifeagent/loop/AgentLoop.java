@@ -490,7 +490,16 @@ public final class AgentLoop {
             return Gated.done();
         }
 
-        ToolOutcome outcome = registry.invoke(request.toolName(), arguments);
+        ToolOutcome outcome;
+        try {
+            outcome = registry.invoke(request.toolName(), arguments);
+        } catch (Throwable failure) {
+            // Same contract as executeOne: a tool that throws an Error must be shortened to one line
+            // and handed back, never allowed to escape run() - the write/high-risk path is no exception.
+            outcome = new ToolFailure(request.toolName(), ToolErrorKind.EXECUTION_ERROR,
+                    LoopErrorMessages.notRun("执行出错：" + failure.getClass().getSimpleName()
+                            + (failure.getMessage() == null ? "" : "：" + failure.getMessage())).asText());
+        }
         recordBreaker(session, outcome);
         ToolCallOutcome result = new ToolCallOutcome(effective,
                 outcome.isError() ? ToolCallOutcome.Status.FAILURE : ToolCallOutcome.Status.SUCCESS,

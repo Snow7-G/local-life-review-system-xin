@@ -9,6 +9,8 @@ import dev.lifeagent.tool.ToolRegistry;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -43,7 +45,10 @@ public final class LoopHarness {
         final AtomicInteger writeFailCalls = new AtomicInteger();
         final AtomicInteger flakyWriteCalls = new AtomicInteger();
         volatile int flakyWriteFailuresAlreadyServed;
+        /** Extra call numbers (1-based) that must fail, so a success can be placed between failures. */
+        final Set<Integer> flakyWriteFailOn = ConcurrentHashMap.newKeySet();
         final AtomicInteger errorCalls = new AtomicInteger();
+        final AtomicInteger writeErrorCalls = new AtomicInteger();
         final AtomicInteger pingCalls = new AtomicInteger();
         volatile int flakyFailuresAlreadyServed;
         final AtomicInteger flakyCalls = new AtomicInteger();
@@ -116,10 +121,16 @@ public final class LoopHarness {
         @AgentTool(name = "probe_flaky_write", permission = Permission.WRITE, description = "先失败后成功的写探针")
         public String flakyWrite(ProbeArgs args) {
             int call = flakyWriteCalls.incrementAndGet();
-            if (call <= flakyWriteFailuresAlreadyServed) {
+            if (call <= flakyWriteFailuresAlreadyServed || flakyWriteFailOn.contains(call)) {
                 throw new IllegalStateException("flaky write failure " + call);
             }
             return "flaky_write:ok#" + call;
+        }
+
+        @AgentTool(name = "probe_write_error", permission = Permission.WRITE, description = "抛 Error 的写探针")
+        public String writeError(ProbeArgs args) {
+            writeErrorCalls.incrementAndGet();
+            throw new AssertionError("probe write boom");
         }
 
         @AgentTool(name = "probe_read_error", permission = Permission.READ, description = "抛 Error 的只读探针")
@@ -221,6 +232,10 @@ public final class LoopHarness {
 
     static ScriptedLlm.ToolSpec fail(String callId) {
         return ScriptedLlm.call(callId, "probe_fail", "{\"value\":\"x\"}");
+    }
+
+    static ScriptedLlm.ToolSpec writeError(String callId) {
+        return ScriptedLlm.call(callId, "probe_write_error", "{\"value\":\"x\"}");
     }
 
     static ScriptedLlm.ToolSpec flaky(String callId) {

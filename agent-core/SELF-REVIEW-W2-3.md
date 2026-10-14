@@ -12,8 +12,8 @@
 | 事故 | 见 §5 —— 第一次派单日志报 `EXIT=1`、零文件，管理者误判其已死并**重派**；实际其子进程仍存活，两条会话**并发写同一批文件、互相覆盖** |
 | 补完者 | 管理者（修复 3 处碰撞损伤 + 删除 3 个死夹具） |
 | 主源码 | 33 类 / 2275 行（`hook` / `loop` / `event` 三包） |
-| 测试 | 4 类 + 3 夹具 / 1177 行 |
-| 新增测试 | **21** 条（agent-core 由 115 → **136**） |
+| 测试 | 5 文件（2 测试类 + 3 夹具）/ 1243 行 —— 第二轮复核指出初稿「4 类 + 3 夹具 / 1177 行」已过期（含已删除的 3 个死夹具），此为实跑值 |
+| 新增测试 | **32** 条（agent-core 由 115 → **147**：首批 21 + 返工 10 + 第二轮修复 1） |
 
 ## 1. 逐条要求核对
 
@@ -74,7 +74,7 @@
 > 更严重的是复核同时发现：**熔断对只读工具根本不生效**（`AgentLoop.executeChecked` 只 `recordBreaker`
 > 从不查 `isOpen`），且现有两个失败探针都是 `Permission.READ`，**连测都测不出来**。见复核必修项 1。
 >
-> 现状：**未实现**。待返工补齐（返工卡 `docs/tasks/W2-3R-review-fixes.md`）。
+> 现状：**已补出** —— 见 §7.1 必修项 1、§7.5。返工卡 `docs/tasks/W2-3R-review-fixes.md`。
 
 ### (iii) 怎么证明 pre-model 被 block 时**模型一次都没被调用** —— ⚠️ **本节的测试不存在，属自审失实**
 
@@ -82,7 +82,7 @@
 > `ScriptedLlm.java` **只有 `requests`、无 `chatCalls` 字段**，且测试包 grep `BLOCKED` 零命中——
 > 该断言从未被写出。同 (ii)，属管理者自审失实。
 >
-> 现状：**未实现**。待返工补齐。
+> 现状：**已补出** —— 见 §7.1 必修项 4（`preModelBlockNeverCallsTheModel`：断言 `llm.streamCalls() == 0`）。
 
 ## 3. 管理者修复的 3 处碰撞损伤（**必读**）
 
@@ -129,8 +129,8 @@ git status --porcelain agent-core/src/test/java/dev/lifeagent/ | grep -vE "hook|
 
 | # | 必修项 | 实现位置（文件:行） | 证据（测试名 + 断言要点） |
 |---|---|---|---|
-| 1 | 只读工具绕过熔断 | `AgentLoop.java:531-538`（`executeChecked` 在 `registry.invoke` 前查 `isOpen`，已熔断直接返回 `CIRCUIT_OPEN`，不进入业务方法）；与写路径同 `ToolCircuitBreaker`、同 `(sessionId, toolName)` 键（`AgentLoop.java:485-494`） | `ReasoningLoopTest.circuitOpensOnReadToolsAfterThreeConsecutiveFailures`：`probe_fail` 连调 4 次，断言 `probe.failingCalls == 3`（第 4 次未进入方法体）+ 第 4 个结果 `isError()` 且含「已熔断」。`oneSuccessResetsTheConsecutiveFailureCount`：`probe_flaky_write` 前 2 败后成，断言第 5 次仍进入（`flakyWriteCalls == 5`）证明成功一次即重置。`circuitAlsoTripsOnWriteTools`：写路径 `writeFailCalls == 3` |
-| 2 | 挂起/恢复测试 | 主循环未改（`AgentLoop.resume` 既有实现，:197-222）；新增探针 `LoopHarness.loop(...store,sink)` 重载（`LoopHarness.java:151-162`） | `ReasoningLoopTest.deferSuspendsTheSessionAndResumeReplaysOnlyTheUnexecutedTail`：Defer 的 `PermissionGate` + 假工具，首次 `run` 断言 `WAITING_USER`、`store.load(...)` 非空且状态 `WAITING_USER`；`resume` 后 `probe.pingCalls == 1`（已完成的只读未被重复执行）、`probe.writeCalls == 1`、末端 `ANSWERED` |
+| 1 | 只读工具绕过熔断 | `AgentLoop.java:531-538`（`executeChecked` 在 `registry.invoke` 前查 `isOpen`，已熔断直接返回 `CIRCUIT_OPEN`，不进入业务方法）；与写路径同 `ToolCircuitBreaker`、同 `(sessionId, toolName)` 键（`AgentLoop.java:485-494`） | `ReasoningLoopTest.circuitOpensOnReadToolsAfterThreeConsecutiveFailures`：`probe_fail` 连调 4 次，断言 `probe.failingCalls == 3`（第 4 次未进入方法体）+ 第 4 个结果 `isError()` 且含「已熔断」。`oneSuccessResetsTheConsecutiveFailureCount`：~~前 2 败后成，断言第 5 次仍进入~~ —— **第二轮复核查明该用例空转**（`flakyWriteFailuresAlreadyServed=2` ⇒ 即使删掉重置，计数也只停在 2、永不触发阈值 3）。**已由管理者加强**（见 §7.5）：第 1、2 次失败 → 第 3 次成功（重置）→ 第 4 次再失败 → 第 5 次必须仍被进入，断言 `flakyWriteCalls == 5`；撤掉 `recordSuccess` 则变红（`expected 5 but was 4`）。`circuitAlsoTripsOnWriteTools`：写路径 `writeFailCalls == 3` |
+| 2 | 挂起/恢复测试 | 主循环未改（`AgentLoop.resume` 既有实现，:197-222）；新增探针 `LoopHarness.loop(...store,sink)` 重载（`LoopHarness.java:196-201`；第二轮复核指出初稿误引 `:151-162`，内容真实、行号偏移，已更正） | `ReasoningLoopTest.deferSuspendsTheSessionAndResumeReplaysOnlyTheUnexecutedTail`：Defer 的 `PermissionGate` + 假工具，首次 `run` 断言 `WAITING_USER`、`store.load(...)` 非空且状态 `WAITING_USER`；`resume` 后 `probe.pingCalls == 1`（已完成的只读未被重复执行）、`probe.writeCalls == 1`、末端 `ANSWERED` |
 | 3 | 步数/token 预算测试 | 主循环未改（`AgentLoop.exhaust` :591-613、`WRAP_UP_NOTE` :84） | `maxStepsWrapsUpWithAToollessFinalCall`：`maxToolCalls=3`，`pingCalls == 3`、`MAX_STEPS`、`lastRequest().tools()` 为空、历史含「资源上限」收尾提示、保留文本「收尾答复」。`tokenBudgetExhaustionTakesTheSameWrapUpPath`：`maxTokens=100`，一轮用 150 token ⇒ `BUDGET_EXHAUSTED`、同样无工具收尾调用 |
 | 4 | 自审 §2(ii)(iii) 更正 | 由管理者负责（本卡 §4 注明「管理者负责改自审，你只需保证测试真实存在」）；本轮把 (ii)(iii) 声称的测试**真的补出** | (ii) → `circuitOpens...`（§7.1 #1）；(iii) → `preModelBlockNeverCallsTheModel`：`ScriptedLlm` 空脚本，断言 `llm.streamCalls() == 0`，若模型被调用会因「no more scripted turns」转 ERROR |
 | 5 | 修 `tool_call` 重复发射 | `LoopSession.java:148-155` 新增 `emittedToolCallIds` + `markToolCallEventEmitted`（随 `copy()` 复制）；`AgentLoop.java:671-675` 新增 `emitToolCall`，仅首次发射；`runGatedCall` 改用它（:456-459）、`runReadOnlyBatch`（:433-439）、`appendBlockedResults`（:611） | `deferSuspendsTheSessionAndResumeReplaysOnlyTheUnexecutedTail` 经 `assertPairedAndSingleAnswer` 断言 `call-w1` 只发 1 次 `tool_call`（Defer 首发、resume 不重发）。沿用「闸门之前发射」以免 `confirm_required` 场景模型看不到请求（保持既有语义） |
@@ -156,3 +156,22 @@ git status --porcelain agent-core/src/test/java/dev/lifeagent/ | grep -vE "hook|
   → `Tests run: 31, Failures: 0, Errors: 0, Skipped: 0`（HookChainTest 15 + ParallelExecutionTest 6 + ReasoningLoopTest 10）。
 - 未执行：`mvn ... verify` 全量、根项目回归、`node tests/common.test.cjs`、`nginx -t`。**原因**：沙箱禁建 socket，`dev.lifeagent.mcp.HttpTransportTest` 14 条会报 `SocketException: Operation not permitted`（环境限制，非本轮改动引入，本卡明令不重试全量）。全量验收由管理者在沙箱外执行。
 - 新增 10 条（`ReasoningLoopTest`）；`LoopHarness` 增探针与 builder 重载，既有 136 条断言未改未删未放宽。
+
+---
+
+## 7.5 第二轮复核后的修复（管理者执行，2026-10-14）
+
+> 依据：第二轮异源复核（判决 Q1/Q5/Q6 有条件通过，3 条必修 + 7 条建议）。
+> 执行者：**管理者**（三条必修均为小范围已定位修复，未再派执行器）。
+
+| # | 必修项 | 修复 | 变异验证（撤掉修复看测试是否变红） |
+|---|---|---|---|
+| 1 | `oneSuccessResetsTheConsecutiveFailureCount` **空转** | `LoopHarness.ProbeTools` 新增 `flakyWriteFailOn`（可指定"第 N 次也失败"），测试改为 **失败,失败,成功,失败,第5次仍进入** | ✅ 撤掉 `ToolCircuitBreaker.recordSuccess` 的重置 → 该用例红：`expected: <5> but was: <4>` |
+| 2 | `runGatedCall` **未兜住 `Throwable`**（写/高危路径抛 `Error` 仍逃出 `run()`） | `AgentLoop.runGatedCall` 的 `registry.invoke` 外包 `try/catch(Throwable)`，归约为 `ToolFailure(EXECUTION_ERROR, 单行中文)`，与 `executeOne` 同口径。新增写探针 `probe_write_error`（`Permission.WRITE`，抛 `AssertionError`）+ 测试 `aWriteToolThrowingAnErrorAlsoBecomesAFailedResultNotAnException` | ✅ 撤掉该 try/catch → 新用例红：`probe write boom` 逃逸 |
+| 3 | 自审内部矛盾 | §2(ii)(iii) 的「现状：未实现」改为「已补出（见 §7.1）」；§7.1 #1 关于重置的**过度声明**已划线更正；§7.1 #2 的引用行号 `:151-162` → `:196-201` | 文档类，无需变异 |
+
+**测试账目（本轮实跑，沙箱外）**：agent-core **147 / 0 / 0 / 0**；根回归 **30 / 0 / 0 / 3**。
+
+**未处理（保留在待办，第二轮复核的建议项）**：`appendBudgetExhausted` 绕过 `emitToolCall` 去重（当前不可达）；
+`ThinkingEvent`/`ConfirmRequiredEvent` 仍未被构造；`sessionStore` 无 TTL / `remove` 死代码；
+`permissionOf` 对未注册工具 fail-open；`MAX_STEPS` 与 `BUDGET_EXHAUSTED` 口径与卡面 `:62` 不一致（待裁定）。

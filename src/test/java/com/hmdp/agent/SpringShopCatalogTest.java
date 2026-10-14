@@ -47,6 +47,7 @@ class SpringShopCatalogTest {
     static final class Fake<T> {
         private final Map<String, Object> answers = new HashMap<>();
         private final List<String> calls = new ArrayList<>();
+        private final Map<String, List<Object[]>> arguments = new HashMap<>();
         private final T service;
 
         @SuppressWarnings("unchecked")
@@ -63,6 +64,8 @@ class SpringShopCatalogTest {
                     return proxy == args[0];
                 }
                 calls.add(name);
+                arguments.computeIfAbsent(name, key -> new ArrayList<>())
+                        .add(args == null ? new Object[0] : args.clone());
                 if (!answers.containsKey(name)) {
                     // Unstubbed includes every write method: calling one fails the test loudly.
                     throw new AssertionError("只读适配器触发了未预期的调用：" + method);
@@ -87,6 +90,18 @@ class SpringShopCatalogTest {
 
         List<String> calls() {
             return calls;
+        }
+
+        /** The arguments of every recorded call to {@code methodName}, in call order. */
+        List<Object[]> argumentsOf(String methodName) {
+            return arguments.getOrDefault(methodName, Collections.emptyList());
+        }
+
+        /** The arguments of the single call to {@code methodName}; fails unless it was called exactly once. */
+        Object[] onlyArgumentsOf(String methodName) {
+            List<Object[]> recorded = argumentsOf(methodName);
+            assertEquals(1, recorded.size(), methodName + " 的调用次数应为 1，实际为 " + recorded.size());
+            return recorded.get(0);
         }
     }
 
@@ -118,8 +133,13 @@ class SpringShopCatalogTest {
 
     private static SpringShopCatalog catalog(Fake<IShopService> shopService, Fake<IVoucherService> voucherService,
                                              Fake<IShopTypeService> shopTypeService) {
+        return catalog(shopService, voucherService, shopTypeService, ORIGIN);
+    }
+
+    private static SpringShopCatalog catalog(Fake<IShopService> shopService, Fake<IVoucherService> voucherService,
+                                             Fake<IShopTypeService> shopTypeService, SearchOrigin origin) {
         return new SpringShopCatalog(
-                shopService.service(), voucherService.service(), shopTypeService.service(), ORIGIN);
+                shopService.service(), voucherService.service(), shopTypeService.service(), origin);
     }
 
     private static SearchNearbyArgs nearby(String category, int radius, Integer maxPrice) {
@@ -207,6 +227,34 @@ class SpringShopCatalogTest {
         }
 
         @Test
+        void searchNearbyReportsNullCategoryWhenTypeNameIsNotInTheTypeTable() {
+            // Same fact shopDetail has to report: a type id with no matching row is an unknown category,
+            // i.e. null. The numeric id must never be smuggled in as the category name.
+            Fake<IShopService> shopService = shops(Result.ok(Collections.singletonList(
+                    shop(1, "无品类店", 9, 60L, 40, 100.0))));
+
+            List<ShopBrief> results = catalog(shopService, vouchers(null), types(type(1, "美食")))
+                    .searchNearby(nearby("美食", 500, null));
+
+            assertEquals(1, results.size());
+            assertNull(results.get(0).category(), "品类反查失败应为 null，不能把 typeId 数字串当品类名");
+        }
+
+        @Test
+        void missingEntityIdIsReportedAsNullNotTheLiteralWordNull() {
+            // String.valueOf(null) would put the text "null" into the tool result, where the model
+            // would read it as a real shop id. A missing id must stay null.
+            Shop noId = new Shop().setName("无 id 店").setTypeId(1L).setAvgPrice(60L).setScore(40).setDistance(100.0);
+            Fake<IShopService> shopService = shops(Result.ok(Collections.singletonList(noId)));
+
+            List<ShopBrief> results = catalog(shopService, vouchers(null), types(type(1, "美食")))
+                    .searchNearby(nearby("美食", 500, null));
+
+            assertEquals(1, results.size());
+            assertNull(results.get(0).shopId(), "缺失的 id 应为 null，而不是字面量 \"null\"");
+        }
+
+        @Test
         void failedResultBecomesAnExplicitError() {
             Fake<IShopService> shopService = shops(Result.fail("查询参数不正确"));
 
@@ -260,16 +308,54 @@ class SpringShopCatalogTest {
         }
 
         @Test
-        void searchWithoutCoordinatesExcludesShopsTheServiceDidNotPlace() {
-            Shop placed = shop(1, "有距离", 1, 60L, 40, 100.0);
-            Shop unplaced = shop(2, "无距离", 1, 60L, 40, null);
-            Fake<IShopService> shopService = shops(Result.ok(Arrays.asList(placed, unplaced)));
+        void forwardsOriginCoordinatesCurrentPageOneAndEmptySortToTheService() {
+            // The radius semantics depend on this single call shape: the only GEO-triggering combination
+            // is (x, y, "") at current=1. Nothing else in the test suite pins it, so a mutation to null
+            // coordinates used to stay green.
+            Fake<IShopService> shopService = shops(Result.ok(Collections.singletonList(
+                    shop(1, "近", 1, 60L, 40, 100.0))));
 
-            List<ShopBrief> results = catalog(shopService, vouchers(null), types(type(1, "美食")))
-                    .searchNearby(nearby("美食", 5000, null));
+            catalog(shopService, vouchers(null), types(type(1, "美食")))
+                    .searchNearby(nearby("美食", 500, null));
 
-            assertEquals(1, results.size());
-            assertEquals("1", results.get(0).shopId());
+            Object[] arguments = shopService.onlyArgumentsOf("quaryByShop");
+            assertEquals(Integer.valueOf(1), arguments[0], "typeId");
+            assertEquals(Integer.valueOf(1), arguments[1], "current 必须固定为第 1 页");
+            assertEquals(ORIGIN.x(), arguments[2], "必须透传配置的 origin.x()");
+            assertEquals(ORIGIN.y(), arguments[3], "必须透传配置的 origin.y()");
+            assertEquals("", arguments[4], "sortBy 必须为空，否则服务不会走 GEO 分支、不填 distance");
+        }
+
+        @Test
+        void unconfiguredOriginFailsLoudlyInsteadOfSilentlyReturningNothing() {
+            // Default configuration: hmdp.agent.search-origin.x/y are absent, so AgentCatalogConfig builds
+            // SearchOrigin(null, null). Without coordinates the service never fills Shop.distance, every
+            // shop fails the radius check, and the tool used to answer "nothing nearby" for every request.
+            Fake<IShopService> shopService = new Fake<>(IShopService.class);
+
+            ShopCatalogException error = expectError(() -> catalog(shopService, vouchers(null),
+                    types(type(1, "美食")), new SearchOrigin(null, null))
+                    .searchNearby(nearby("美食", 500, null)));
+
+            assertTrue(error.getMessage().contains("搜索原点未配置"), error.getMessage());
+            assertTrue(error.getMessage().contains("hmdp.agent.search-origin.x"), error.getMessage());
+            assertTrue(error.getMessage().contains("hmdp.agent.search-origin.y"), error.getMessage());
+            // Fail before touching the catalog: no shop lookup, so a misconfigured deployment cannot
+            // masquerade as "no shops within the radius".
+            assertTrue(shopService.calls().isEmpty(), "原点未配置时不该查询店铺");
+        }
+
+        @Test
+        void originMissingOneCoordinateAlsoFailsLoudly() {
+            Fake<IShopService> shopService = new Fake<>(IShopService.class);
+
+            ShopCatalogException error = expectError(() -> catalog(shopService, vouchers(null),
+                    types(type(1, "美食")), new SearchOrigin(120.15, null))
+                    .searchNearby(nearby("美食", 500, null)));
+
+            assertTrue(error.getMessage().contains("搜索原点未配置"), error.getMessage());
+            assertTrue(error.getMessage().contains("hmdp.agent.search-origin.y"), error.getMessage());
+            assertTrue(shopService.calls().isEmpty(), "原点未配置时不该查询店铺");
         }
     }
 
@@ -303,6 +389,32 @@ class SpringShopCatalogTest {
                     .shopDetail(new ShopDetailArgs(3));
 
             assertNull(detail);
+        }
+
+        @Test
+        void emptyShopListIsReportedAsNoDetailRatherThanATypeMismatch() {
+            // An empty list is how "the id does not exist" comes back; it must read as "not found",
+            // not as a malformed payload of the wrong type.
+            Fake<IShopService> shopService = new Fake<>(IShopService.class)
+                    .on("quaryById", Result.ok(Collections.emptyList()));
+
+            ShopDetail detail = catalog(shopService, vouchers(null), types(type(1, "美食")))
+                    .shopDetail(new ShopDetailArgs(3));
+
+            assertNull(detail, "空 List 应表述为「未找到该店铺」，不是类型不符");
+        }
+
+        @Test
+        void shopDetailReportsNullCategoryInsteadOfTheNumericTypeId() {
+            // The type table has no row for typeId=9, so the category is unknown. The adapter must not
+            // fall back to the numeric type id: a tool-visible "9" would pose as a category name.
+            Shop shop = shop(3, "无品类店", 9, 88L, 46, null);
+            Fake<IShopService> shopService = new Fake<>(IShopService.class).on("quaryById", Result.ok(shop));
+
+            ShopDetail detail = catalog(shopService, vouchers(null), types(type(1, "美食")))
+                    .shopDetail(new ShopDetailArgs(3));
+
+            assertNull(detail.category(), "品类反查失败应为 null，不能把 typeId 数字串当品类名");
         }
 
         @Test

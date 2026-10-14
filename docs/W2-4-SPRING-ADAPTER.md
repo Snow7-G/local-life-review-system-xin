@@ -4,6 +4,7 @@
 > `src/test/java/com/hmdp/agent/**`、本文件。
 > `agent-core/**` 一行未改（`git status --short agent-core/` 为空）。
 > 本文件按 `docs/REVIEW-PROTOCOL.md` 第 1 遍要求，逐条记录「要求 → 实现位置（文件:行）→ 是否达成 → 证据」。
+> **W2-4R 返工已追加在文末「返工记录（W2-4R）」**；该节是本轮必修项的最终证据，行号以返工后为准。
 
 ---
 
@@ -16,10 +17,11 @@
 | `src/main/java/com/hmdp/agent/ValueCoercions.java` | `Long→Integer` 钳制、`score` 换算 |
 | `src/main/java/com/hmdp/agent/ShopCatalogException.java` | 业务失败 / 类型不符的统一异常（会被 agent-core 转成 `EXECUTION_ERROR`） |
 | `src/main/java/com/hmdp/agent/AgentCatalogConfig.java` | 唯一 Spring 装配点，暴露 `ShopCatalog` bean（无路由、无 controller） |
-| `src/test/java/com/hmdp/agent/SpringShopCatalogTest.java` | 17 条：半径/预算/品类/失败/钳制/类型/只读 |
+| `src/test/java/com/hmdp/agent/SpringShopCatalogTest.java` | 23 条（W2-4 交付 17 条 + W2-4R 返工 6 条）：半径/预算/品类/失败/钳制/类型/只读/原点 |
 | `src/test/java/com/hmdp/agent/ToolRegistryWiringTest.java` | 4 条：经 agent-core `ToolRegistry` 的端到端接线 |
 
-**新增测试合计 21 条**（17 + 4），全部真跑通过（见 §4）。
+**W2-4 新增测试合计 21 条**（`SpringShopCatalogTest` 17 + `ToolRegistryWiringTest` 4），全部真跑通过（见 §4）。
+**W2-4R 追加 6 条**（`SpringShopCatalogTest`，见本文件末「返工记录（W2-4R）」），当前 `com.hmdp.agent.*` 合计 **27 条**真跑通过（13 + 2 + 8 + 4，见 §4）。
 
 ---
 
@@ -59,13 +61,22 @@
 `hmdp.agent.search-origin.x / y` 注入，缺省为未配置）。
 
 **取舍与诚实标注**：`SearchOrigin` 把「用户当前位置」建模为应用侧可配置的默认原点（后续 W2-5
-的传输层/客户端定位可覆盖它，无需改 agent-core 契约）。**未配置坐标时**，`quaryByShop` 走数据库
-分页分支，`Shop.distance` 为 `null`；此时适配器**排除** distance 为空的店铺
-（`SpringShopCatalog.java:121-129`）——不把「无法证明在半径内」当成「在半径内」。
-该行为由 `searchWithoutCoordinatesExcludesShopsTheServiceDidNotPlace` 覆盖。
+的传输层/客户端定位可覆盖它，无需改 agent-core 契约）。逐店归则不变：`quaryByShop` 只有拿到
+坐标才走 GEO 分支，未携带 distance 的店铺**一律排除**（`SpringShopCatalog.java:126-134`），
+不把「无法证明在半径内」当成「在半径内」。
 
-> ⚠️ 这是一处**契约层面的缺口**（工具 schema 不携带位置，但半径语义依赖位置），非本卡可自行
-> 消除。本卡以「可配置原点」最小化落地，并在复核时提请裁定是否需要 W2-5 把定位并入调用链。
+**W2-4R 裁定（管理者）：默认（未配置）原点是错误，不是空结果。** 原实现在原点缺失时坐标透传
+`null` ⇒ `Shop.distance` 全为 `null` ⇒ 逐店 `withinRadius` 返回 false ⇒ **`search_nearby` 恒返空
+且不报错**。模型会把「配置缺失」误读成「附近没有店」这类业务答案，是一种静默失败。裁定 **fail-loud**：
+`origin` 缺 x 或 y 时抛 `ShopCatalogException`（`SpringShopCatalog.java:248-270`，入口
+`:67` 先于任何服务调用），消息显式点出配置项
+「搜索原点未配置：请在配置中提供 hmdp.agent.search-origin.x / .y」。这与 `PermissionGate` 的
+fail-closed 同精神：**宁可显式报错，不要静默给出貌似正常的业务结果**。
+证据：`SpringShopCatalogTest$SearchNearby.unconfiguredOriginFailsLoudlyInsteadOfSilentlyReturningNothing`、
+`originMissingOneCoordinateAlsoFailsLoudly`（两者都断言**未调用** `quaryByShop`）。
+
+> ⚠️ 契约层面的缺口仍在（工具 schema 不携带位置，但半径语义依赖位置），非本卡可自行消除。
+> 本卡以「可配置原点 + 缺配置即报错」最小化落地，是否需要 W2-5 把定位并入调用链仍请复核裁定。
 
 ### 决策 2 · `Result.success==false` 一律**抛 `ShopCatalogException`**（而非返回空）
 
@@ -100,7 +111,7 @@
 
 ## 4. 测试与证据（真跑）
 
-### 新增测试（真跑，21/21 绿）
+### 新增测试（W2-4 那一跑，真跑，21/21 绿）
 
 ```
 mvn -B -ntp -o test -Dtest=ToolRegistryWiringTest,SpringShopCatalogTest -DfailIfNoSpecifiedTests=false
@@ -137,7 +148,19 @@ mvn -B -ntp -o test
 → Tests run: 47, Failures: 0, Errors: 19, Skipped: 3   BUILD FAILURE
 ```
 
-- 47 = 既有 30（`Tests run: 30 / Skipped: 3`）+ 新增 17。
+- **47 = 既有 30（`Tests run: 30 / Skipped: 3`）+ `SpringShopCatalogTest` 17。这一跑不含
+  `ToolRegistryWiringTest` 的 4 条**（该测试类当时尚未写入）。这正是 §0 与本节旧版计数
+  「30 + 21 = 51 ≠ 47」矛盾的来源：47 那一跑发生在接线测试落盘之前；接线测试随后单独跑
+  （`Tests run: 4`），合起来才是 21。合计 51 条只能由两次不同的 `mvn` 命令相加得到，
+  没有任何一次单跑同时包含全部 21 条 —— 旧版把两次口径混写成一句，属自审笔误，特此更正。
+- 逐类核对（`target/surefire-reports/*.txt` 汇总，`tests=` 总和亦为 47）：
+  `HmDianPingApplicationTests` 3（Skipped 3）+ 既有 service/controller 类 27 = 30；
+  `SpringShopCatalogTest` 17；`ToolRegistryWiringTest` 4（单独一跑）。
+- **W2-4R 之后的 agent 包单跑**（`mvn -B -ntp -o test -Dtest='com.hmdp.agent.*Test'`）：
+  `Tests run: 27, Failures: 0, Errors: 0, Skipped: 0   BUILD SUCCESS`（13 + 2 + 8 + 4）。
+- 更正说明（W2-4R 必修 2）：`Tests run: 47` 的既有部分确为 **30**（含 3 Skipped）；47 − 17 = 30 自洽。
+  旧版称「21 条全部在同一跑中真跑通过」是把「全量那跑的 17 条」与「接线单独一跑的 4 条」混写，
+  而全量那跑不含接线 4 条。
 - **19 条 Errors 全部是既有测试在沙箱内的基础设施失败**，与本次改动无关：
   - **17 条** = `IllegalState: Could not initialize plugin: interface org.mockito.plugins.MockMaker`
     （Mockito 需 self-attach，沙箱禁 socket）。先于我这条命令，单跑其子集 12/12 同样红，
@@ -183,7 +206,107 @@ mvn -B -ntp -o test
 
 | 项 | 状态 | 说明 |
 |---|---|---|
-| 工具 schema 无坐标但语义要求半径 | ⚠️ 契约缺口 | 以 `SearchOrigin` 可配置原点落地（§2 决策 1）；`distance` 为空则排除。请复核裁定是否需 W2-5 并入定位 |
+| 工具 schema 无坐标但语义要求半径 | ⚠️ 契约缺口（W2-4R 已缓解） | 以 `SearchOrigin` 可配置原点落地（§2 决策 1）；原点缺配置时 fail-loud 抛错（W2-4R 必修 1），`distance` 为空则逐店排除。请复核裁定是否需 W2-5 并入定位 |
 | `score ÷10` 的换算 | ⚠️ 解释性取值 | 依实体注释「乘10保存」，测试固定 4.2/4.6（§3）；如复核认为应原样传，请打回 |
 | 只取第一页 | ⚠️ 已知取舍 | 见 §5；如需凑满 N 家需升级实现 |
 | 全量 `verify` | 未执行 | 沙箱 socket 限制；交管理者（§4） |
+
+---
+
+## 返工记录（W2-4R）
+
+> 依据 `docs/reviews/W2-4-review.md` 的 4 条必修 + 5 条建议，按 `docs/tasks/W2-4R-review-fixes.md` 执行。
+> 只改 `src/main/java/com/hmdp/agent/SpringShopCatalog.java`、`src/test/java/com/hmdp/agent/SpringShopCatalogTest.java`、
+> 本文件；`agent-core/**`、`pom.xml`、`.github/**`、既有 service/entity/controller/dto 与既有测试一行未动。
+> 真假两说：下面标「真跑」的都是本轮真实执行过的命令；标「未执行」的绝不冒充通过。
+
+### 必修项
+
+**必修 1 · 默认配置下工具恒空且静默 → 裁定 fail-loud（最重要）**
+- 实现位置：`SpringShopCatalog.java:67`（`searchNearby` 首行先 `requireConfiguredOrigin()`，**先于任何服务调用**）、
+  `SpringShopCatalog.java:248-270`（`requireConfiguredOrigin` / `missingOriginMessage`；缺 x 或 y 即抛
+  `ShopCatalogException`，消息含「搜索原点未配置：请在配置中提供 hmdp.agent.search-origin.x / .y」并回显当前 x/y）。
+- 文档：本文件 §2 决策 1 已改写，写明「后果 = 恒返空且静默」与「裁定 fail-loud，与 PermissionGate fail-closed 同精神」。
+- 证据（真跑）：
+  - `SpringShopCatalogTest$SearchNearby.unconfiguredOriginFailsLoudlyInsteadOfSilentlyReturningNothing`：
+    断言 `error.getMessage()` 含「搜索原点未配置」+ `hmdp.agent.search-origin.x` + `hmdp.agent.search-origin.y`，
+    并断言 `shopService.calls().isEmpty()`（即**未调用 `quaryByShop`**，先报错后不查店铺）。
+  - `SpringShopCatalogTest$SearchNearby.originMissingOneCoordinateAlsoFailsLoudly`：
+    `new SearchOrigin(120.15, null)`，断言消息含「搜索原点未配置」+ `hmdp.agent.search-origin.y`，
+    并断言 `shopService.calls().isEmpty()`。
+- 变异验证（反向证明，真跑）：临时把 `:67` 的 `requireConfiguredOrigin();` 注释掉后单跑 agent 包
+  → `Tests run: 26, Failures: 2`，失败正是上述两条；恢复后 27/27 绿。
+
+**必修 2 · 更正自审测试计数矛盾**
+- 实现位置：本文件 §0（`:22` 一带）与 §4「全量 `mvn -B -ntp test`」（原 `:140` 一带）。
+- 核对到的真实数字（对 `target/surefire-reports/*.txt` 逐类求和）：
+  `HmDianPingApplicationTests` 3（Skipped 3）+ 既有 service/controller 类 27 = **既有 30**；
+  `SpringShopCatalogTest` **17**；`ToolRegistryWiringTest` **4**。全量那一跑 `Tests run: 47 = 30 + 17`，
+  **不含** `ToolRegistryWiringTest` 的 4 条（该类当时尚未写入）；接线 4 条随后单独一跑。
+  故 30+21=51 只能由两次不同 `mvn` 相加得到，没有任何一次单跑同时含全部 21 条。
+- 已改写为一致口径：§0 拆分「W2-4 的 21 = 17 + 4（两次跑）/ W2-4R 后 27 = 13 + 2 + 8 + 4」，
+  §4 补逐类求和与「47 那一跑缺接线 4 条」的说明。
+
+**必修 3 · 改名/改实那条测试**
+- 处理：删除名不副实的 `searchWithoutCoordinatesExcludesShopsTheServiceDidNotPlace`（它用的是**已配置**
+  `ORIGIN`，仅假数据 distance 为 null），**合并为必修 1 的真用例**：
+  `unconfiguredOriginFailsLoudlyInsteadOfSilentlyReturningNothing` + `originMissingOneCoordinateAlsoFailsLoudly`
+  （`SpringShopCatalogTest.java:330-350`）。
+- 同步修正自审：§2 决策 1 里对旧测试名的援引已替换为新用例名（旧 `:65` 的援引已不存在）。
+- 另补反向用例 `forwardsOriginCoordinatesCurrentPageOneAndEmptySortToTheService`（`SpringShopCatalogTest.java:311-328`）
+  钉住「已配置原点时坐标/current/sortBy 的真实透传」，与原用例想表达的现象对齐。
+
+**必修 4 · 品类缺失行为统一并显式化**
+- 实现位置：`SpringShopCatalog.java:144-151`（`categoryNameOf` 去掉 `typeId.toString()` 回退，反查不到即返 `null`），
+  与 `:87`（`searchNearby` 的 `typeNames.get(shop.getTypeId())`）保持一致：两条路径同一事实同一输出 `null`。
+- 证据（真跑）：
+  - `SpringShopCatalogTest$ShopDetailAndVouchers.shopDetailReportsNullCategoryInsteadOfTheNumericTypeId`：
+    typeId=9 无对应品类行，断言 `assertNull(detail.category())`。
+  - `SpringShopCatalogTest$SearchNearby.searchNearbyReportsNullCategoryWhenTypeNameIsNotInTheTypeTable`：
+    同上场景在搜索路径，断言 `assertNull(results.get(0).category())`。
+- 变异验证（反向证明，真跑）：临时把 `:150` 改回 `name != null ? name : typeId.toString()`，
+  单跑 → `shopDetailReportsNullCategoryInsteadOfTheNumericTypeId` 失败 `expected: <null> but was: <9>`；恢复后绿。
+
+### 建议项（逐条：做 / 未做）
+
+1. **假服务记录实参并断言透传 —— 已做。**
+   `Fake` 新增 `arguments` 记录与 `argumentsOf` / `onlyArgumentsOf`（`SpringShopCatalogTest.java:96-104`）；
+   `forwardsOriginCoordinatesCurrentPageOneAndEmptySortToTheService`（`:311`）断言 `quaryByShop` 收到
+   `typeId=1 / current=1 / origin.x() / origin.y() / sortBy=""`。
+   变异验证（真跑）：把 `:75` 的 `origin.x()` 改成 `null` → 该用例失败 `expected: <120.15> but was: <null>`；
+   恢复后绿。（旧版此处是盲区：坐标改 null 仍全绿。）
+2. **`typeId.intValue()` 范围校验 —— 已做。**
+   新增 `intIdOf(Long, String)`（`SpringShopCatalog.java:279-284`）：超出 int 范围抛 `ShopCatalogException`，
+   替换原先静默截断的 `typeId.intValue()`（调用点 `:75`）。
+3. **`requireOne` 空 List 语义 —— 已做。**
+   `SpringShopCatalog.java:213-227`：`null` 与空 `List` 同为「未找到该店铺」→ 返 `null`；
+   非空且类型不符仍显式抛错。用例 `emptyShopListIsReportedAsNoDetailRatherThanATypeMismatch`
+   （`SpringShopCatalogTest.java:395`）断言空 List ⇒ `assertNull(detail)`。
+   变异验证（真跑）：去掉空 List 分支 → 该用例报「返回类型不符：期望 Shop，实际为 EmptyList」；恢复后绿。
+4. **`String.valueOf(id)` 的 `"null"` —— 已做。**
+   新增 `idText(Long)`（`SpringShopCatalog.java:286-294`），id 为 null 时返 null；
+   `shopId`/`voucherId` 三处改用（`:85`、`:102`、`:117-118`）。
+   用例 `missingEntityIdIsReportedAsNullNotTheLiteralWordNull`（`SpringShopCatalogTest.java:244`）断言缺失 id ⇒ `null`。
+   变异验证（真跑）：把 `idText` 改回 `String.valueOf` → 该用例失败；恢复后绿。
+5. **自审归因结论补命令与原始输出摘要 —— 已做。**
+   见 §4：全量跑命令、`Tests run: 47 ... Errors: 19` 原文、逐类求和、以及「47 缺接线 4 条」的归因；
+   沙箱红项仍归因于既有 Mockito self-attach / `ServerSocket`，与本改动无因果。
+
+### 本轮真跑命令与结果（原文摘要）
+
+```bash
+# 1) agent 包回归（本卡要求的验收口径；-Dtest='com.hmdp.agent.*' 在 surefire 3.5.6 下匹配 0 条，改用 *Test 后缀）
+export MAVEN_OPTS="-Xmx640m"
+mvn -B -ntp -o test -Dtest='com.hmdp.agent.*Test' -Dsurefire.failIfNoSpecifiedTests=false
+# → SpringShopCatalogTest$SearchNearby            Tests run: 13
+#   SpringShopCatalogTest$ReadOnly               Tests run: 2
+#   SpringShopCatalogTest$ShopDetailAndVouchers  Tests run: 8
+#   ToolRegistryWiringTest                       Tests run: 4
+#   Tests run: 27, Failures: 0, Errors: 0, Skipped: 0   BUILD SUCCESS
+```
+
+- **未执行**：`mvn -B -ntp verify`（全量含 Boot 打包）—— 沙箱禁 socket，既有 socket/Mockito 测试必红，按卡面交管理者。
+- **未执行**：`mvn -f agent-core/pom.xml verify` —— 本轮未改 agent-core（`git status --short agent-core/` 为空）。
+- 说明：卡面给的 `-Dtest='com.hmdp.agent.*'` 在本机 surefire 3.5.6 下选出 0 条（无 `Tests run` 输出、BUILD SUCCESS），
+  已改用 `-Dtest='com.hmdp.agent.*Test'` 以获得真实的 27 条执行结果（上述即该命令输出）。
+- 未提交、未 push。

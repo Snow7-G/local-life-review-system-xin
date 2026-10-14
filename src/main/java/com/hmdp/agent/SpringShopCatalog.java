@@ -38,6 +38,10 @@ import java.util.Map;
  *   <li>{@code Result.success == false} is treated as a tool failure and raises
  *       {@link ShopCatalogException}; a {@code data} payload of the wrong type fails explicitly too,
  *       so a malformed service result never degrades into a silently truncated answer.</li>
+ *   <li>An unconfigured search origin (a {@code null} x or y) is a tool error rather than an empty
+ *       result. Without coordinates {@code quaryByShop} never fills {@code Shop.distance}, so every
+ *       shop would fail the radius check and the tool would answer "nothing nearby" for every
+ *       request. Failing loudly keeps the same spirit as the gate's fail-closed behaviour.</li>
  * </ul>
  */
 public class SpringShopCatalog implements ShopCatalog {
@@ -60,6 +64,7 @@ public class SpringShopCatalog implements ShopCatalog {
 
     @Override
     public List<ShopBrief> searchNearby(SearchNearbyArgs args) {
+        requireConfiguredOrigin();
         Long typeId = resolveTypeId(args.category());
         if (typeId == null) {
             // Unknown category: no id to search with, and guessing one would be wrong. Empty, not an error.
@@ -67,7 +72,7 @@ public class SpringShopCatalog implements ShopCatalog {
         }
 
         Result result = shopService.quaryByShop(
-                typeId.intValue(), 1, origin.x(), origin.y(), "");
+                intIdOf(typeId, "quaryByShop"), 1, origin.x(), origin.y(), "");
         List<Shop> shops = requireList(result, Shop.class, "quaryByShop");
 
         Map<Long, String> typeNames = loadTypeNames();
@@ -77,7 +82,7 @@ public class SpringShopCatalog implements ShopCatalog {
                 continue;
             }
             briefs.add(new ShopBrief(
-                    String.valueOf(shop.getId()),
+                    idText(shop.getId()),
                     shop.getName(),
                     typeNames.get(shop.getTypeId()),
                     ValueCoercions.clampToInt(shop.getAvgPrice()),
@@ -94,7 +99,7 @@ public class SpringShopCatalog implements ShopCatalog {
             return null;
         }
         return new ShopDetail(
-                String.valueOf(shop.getId()),
+                idText(shop.getId()),
                 shop.getName(),
                 categoryNameOf(shop.getTypeId()),
                 shop.getAddress(),
@@ -109,8 +114,8 @@ public class SpringShopCatalog implements ShopCatalog {
         List<VoucherBrief> briefs = new ArrayList<>(vouchers.size());
         for (Voucher voucher : vouchers) {
             briefs.add(new VoucherBrief(
-                    String.valueOf(voucher.getId()),
-                    String.valueOf(voucher.getShopId()),
+                    idText(voucher.getId()),
+                    idText(voucher.getShopId()),
                     voucher.getTitle(),
                     ValueCoercions.clampToInt(voucher.getPayValue()),
                     ValueCoercions.clampToInt(voucher.getActualValue())));
@@ -140,8 +145,9 @@ public class SpringShopCatalog implements ShopCatalog {
         if (typeId == null) {
             return null;
         }
-        String name = loadTypeNames().get(typeId);
-        return name != null ? name : typeId.toString();
+        // No guessing: an unresolved type id is reported as "category unknown" (null), exactly like
+        // searchNearby does through typeNames.get(...). The numeric id must never pose as a name.
+        return loadTypeNames().get(typeId);
     }
 
     /** Resolves a category name such as 火锅 to its type id, or {@code null} when there is no match. */
@@ -201,12 +207,15 @@ public class SpringShopCatalog implements ShopCatalog {
 
     /**
      * Reads a {@code Result} whose payload is a single {@code elementType}, or {@code null} when the
-     * service found nothing.
+     * service found nothing. Both a {@code null} payload and an empty list read as "not found"; any
+     * other payload that is not an {@code elementType} is an explicit type mismatch.
      */
     private <T> T requireOne(Result result, Class<T> elementType, String source) {
         requireSuccess(result, source);
         Object data = result.getData();
-        if (data == null) {
+        if (data == null || (data instanceof List<?> list && list.isEmpty())) {
+            // Null and an empty list both mean "no such row", so they read the same way: not found.
+            // Reporting the empty list as a payload type mismatch would be misleading.
             return null;
         }
         if (!elementType.isInstance(data)) {
@@ -225,6 +234,63 @@ public class SpringShopCatalog implements ShopCatalog {
             String reason = result.getErrorMsg() == null ? "未知错误" : result.getErrorMsg();
             throw new ShopCatalogException(source + " 失败：" + reason);
         }
+    }
+
+    /**
+     * Fails loudly when the search origin has not been configured.
+     *
+     * <p>{@code quaryByShop} only fills {@code Shop.distance} on its GEO branch, which needs both
+     * coordinates. With a {@code null} x or y the service returns shops without a distance,
+     * {@link #withinRadius} rejects all of them, and {@code search_nearby} would silently answer
+     * "no shops nearby" for every call - a configuration mistake disguised as a business answer.
+     * The rationale is recorded in {@code docs/W2-4-SPRING-ADAPTER.md} §决策 1.</p>
+     */
+    private void requireConfiguredOrigin() {
+        Double x = origin == null ? null : origin.x();
+        Double y = origin == null ? null : origin.y();
+        if (x == null || y == null) {
+            throw new ShopCatalogException(missingOriginMessage(x, y));
+        }
+    }
+
+    private static String missingOriginMessage(Double x, Double y) {
+        StringBuilder missing = new StringBuilder();
+        if (x == null) {
+            missing.append("hmdp.agent.search-origin.x");
+        }
+        if (y == null) {
+            if (missing.length() > 0) {
+                missing.append(" 和 ");
+            }
+            missing.append("hmdp.agent.search-origin.y");
+        }
+        return "搜索原点未配置：请在配置中提供 " + missing
+                + "（当前 x=" + x + ", y=" + y + "）。半径过滤依赖原点坐标，"
+                + "缺少配置时工具不会静默返回空列表。";
+    }
+
+    /**
+     * Narrows a resolved {@code typeId} to the {@code Integer} that {@code quaryByShop} takes.
+     *
+     * <p>{@code ShopType.id} is a {@code Long} while the service wants an {@code Integer}; the id
+     * comes from the type table so it fits in practice, but the narrowing is checked explicitly
+     * rather than truncating silently.</p>
+     */
+    private static int intIdOf(Long typeId, String source) {
+        if (typeId < Integer.MIN_VALUE || typeId > Integer.MAX_VALUE) {
+            throw new ShopCatalogException(source + " 的品类 id 超出 int 范围：" + typeId);
+        }
+        return typeId.intValue();
+    }
+
+    /**
+     * Renders an entity id as text for the agent-core records.
+     *
+     * <p>A missing id stays {@code null}; {@code String.valueOf} would turn it into the literal
+     * {@code "null"}, which the model would read as a real id.</p>
+     */
+    private static String idText(Long id) {
+        return id == null ? null : id.toString();
     }
 
     private String describe(Object value) {

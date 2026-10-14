@@ -88,6 +88,19 @@
             <artifactId>hutool-all</artifactId>
             <version>5.7.17</version>
         </dependency>
+        <!--
+          自研 Agent 框架（手册 §3：与业务无关的独立模块）。
+          依赖方向是「应用依赖框架」：根项目实现 agent-core 的 ShopCatalog 抽象，
+          由 agent-core 拥有契约、根项目提供业务实现。
+          构建前置：CI 在根 verify 之前先执行 mvn -f agent-core/pom.xml -B -ntp install，
+          把 agent-core 装进本地仓库，否则这里解析不到（agent-core 不并入根 reactor，
+          原因见 docs/W1-2-REACTOR.md：根打包为 Boot fat jar，聚合项目要求 packaging=pom）。
+        -->
+        <dependency>
+            <groupId>dev.lifeagent</groupId>
+            <artifactId>agent-core</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
     <build>

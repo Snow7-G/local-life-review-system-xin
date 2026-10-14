@@ -19,8 +19,13 @@
 - `src/test/java/com/hmdp/agent/**`（新测试）
 - `docs/W2-4-SPRING-ADAPTER.md`（新建，记录映射决策）
 
+**决策 A 已由嘉批准（2026-10-14）**：根项目依赖 agent-core 契约。该项已由**管理者**落地，你**不需要**再改：
+根 `pom.xml` 已加 `dev.lifeagent:agent-core:0.1.0-SNAPSHOT` 依赖；`.github/workflows/ci.yml` 已在根 `verify`
+之前插入 `mvn -f agent-core/pom.xml -B -ntp install`；agent-core 已 install 进本机本地仓库。
+**依赖方向 = 应用依赖框架**（agent-core 拥有契约，根项目提供业务实现）。
+
 **禁止**：改 `agent-core/**`（一行都不许）、改既有的任何 service/entity/controller/dto 类、
-改任何 `pom.xml` 的既有依赖、改 `.github/**`、改 `nginx-1.18.0/**`。
+再改 `pom.xml`、再改 `.github/**`、改 `nginx-1.18.0/**`。
 **若既有根项目 30 条测试中某条因你的改动失败，停下报告，不许改它。**
 
 ## 关键约束（读透再动手）

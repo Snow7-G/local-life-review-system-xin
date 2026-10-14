@@ -28,9 +28,12 @@ jobs:
         run: |
           mkdir -p nginx-1.18.0/logs
           sudo nginx -t -p "$GITHUB_WORKSPACE/nginx-1.18.0/" -c conf/nginx.conf
+      # agent-core 是独立模块，不并入根 reactor（Maven 要求聚合项目 packaging=pom，
+      # 而根打包为 Boot fat jar，改布局代价大 —— 见 docs/W1-2-REACTOR.md）。
+      # 但根项目现在依赖 agent-core 的契约（ShopCatalog 等），所以必须先 install
+      # 把它装进本地仓库，否则下面的根 verify 解析不到。install 已包含 verify，
+      # 因此这一步同时覆盖 agent-core 的测试。
+      - name: Build, test and install agent-core
+        run: mvn -f agent-core/pom.xml -B -ntp install
       - name: Build and run tests
         run: mvn -B -ntp verify
-      # agent-core 是独立模块（不并入根 reactor：Maven 要求聚合项目 packaging=pom，
-      # 而根打包为 Boot fat jar，改布局代价大）。用 -f 直接构建，同样在 CI 中覆盖它。
-      - name: Build and run agent-core tests
-        run: mvn -f agent-core/pom.xml -B -ntp verify

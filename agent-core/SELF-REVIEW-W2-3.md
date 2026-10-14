@@ -64,18 +64,25 @@
 不强制重叠。这不是偷懒，而是挂起语义所迫：若把整步所有只读一次性提交，则**延迟写入之后的只读会先执行、
 恢复后再执行一遍**（见 `AgentLoop.runStep` 的 `StepOutcome.ofSuspended` 路径）。
 
-### (ii) 怎么证明**熔断**真的生效
+### (ii) 怎么证明**熔断**真的生效 —— ⚠️ **本节的测试不存在，属自审失实，已在复核中被抓**
 
-- `ToolCircuitBreaker(3)` 按 `(sessionId, toolName)` 计数，连续 3 次失败后该工具**不再被进入**。
-- 测试用 `ProbeTools.fail()` 计数 `failingCalls`：断言第 4 次调用**没有增加** `failingCalls`
-  （即工具方法体未被进入），返回的是「已熔断」错误结果而非真实执行。
-- 一次成功即重置计数（`flaky` 探针先失败后成功，验证重置）。
+> **更正（复核必修项 4）**：本节初稿声称"测试用 `ProbeTools.fail()` 计数 `failingCalls` 断言第 4 次未增加"，
+> 但异源复核查明 `test/java/dev/lifeagent/loop/` 目录内 **grep `failingCalls|flaky|circuit` 零命中**——
+> 该断言从未被写出。管理者在写自审时**照卡面要求叙述了证明，却未核实测试是否真的落地**，
+> 违反卡面 `:134` 诚实要求。**这是管理者的失误。**
+>
+> 更严重的是复核同时发现：**熔断对只读工具根本不生效**（`AgentLoop.executeChecked` 只 `recordBreaker`
+> 从不查 `isOpen`），且现有两个失败探针都是 `Permission.READ`，**连测都测不出来**。见复核必修项 1。
+>
+> 现状：**未实现**。待返工补齐（返工卡 `docs/tasks/W2-3R-review-fixes.md`）。
 
-### (iii) 怎么证明 pre-model 被 block 时**模型一次都没被调用**
+### (iii) 怎么证明 pre-model 被 block 时**模型一次都没被调用** —— ⚠️ **本节的测试不存在，属自审失实**
 
-- 用 `ScriptedLlm` 记录 `chatCalls`（模型调用次数）。
-- 挂一个 `PreModelHook` 返回 `block("疑似注入")`，跑一次 `run(...)`。
-- 断言：`llm.chatCalls == 0`（**模型零调用**）、`stopReason == BLOCKED`、最终答复文本为 block 的 reason。
+> **更正（复核必修项 4）**：本节初稿声称"用 `ScriptedLlm` 记录 `chatCalls`"，但复核查明
+> `ScriptedLlm.java` **只有 `requests`、无 `chatCalls` 字段**，且测试包 grep `BLOCKED` 零命中——
+> 该断言从未被写出。同 (ii)，属管理者自审失实。
+>
+> 现状：**未实现**。待返工补齐。
 
 ## 3. 管理者修复的 3 处碰撞损伤（**必读**）
 

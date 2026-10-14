@@ -89,6 +89,8 @@ public final class AnthropicMessagesAdapter extends AbstractHttpLlmAdapter {
 
     @Override
     protected void validateStreamComplete(Object streamState) {
+        // TODO(W2-3 循环层): the SSE body has no read deadline; the loop layer that owns the stream
+        // must enforce an idle timeout. See the note on LlmHttpConfig.
         if (!((AnthropicStreamState) streamState).messageStopped) {
             throw new LlmProtocolException("Anthropic SSE stream ended before message_stop");
         }
@@ -135,9 +137,40 @@ public final class AnthropicMessagesAdapter extends AbstractHttpLlmAdapter {
                 yield false;
             }
             case "ping" -> true;
-            case "error" -> throw new LlmProtocolException("Anthropic SSE stream reported an error");
+            case "error" -> throw new LlmProtocolException(
+                    "Anthropic SSE stream reported an error: " + providerErrorDetail(root));
             default -> true;
         };
+    }
+
+    /** Upper bound on the provider error detail kept in an exception message. */
+    private static final int MAX_ERROR_DETAIL = 512;
+
+    /**
+     * Keeps the provider's own error detail - {@code error.type} and {@code error.message} - instead
+     * of swallowing it (W2-1 review), while staying bounded: a gateway may echo a large body back,
+     * and this string travels into logs and exception messages. Null-safe and whitespace-collapsed.
+     *
+     * @param root the decoded {@code error} event
+     * @return a single-line detail, never blank
+     */
+    private static String providerErrorDetail(JsonNode root) {
+        JsonNode error = root.path("error");
+        String type = textOrEmpty(error.get("type"));
+        String message = textOrEmpty(error.get("message"));
+        String detail = type.isEmpty() ? message
+                : message.isEmpty() ? type : type + " - " + message;
+        detail = detail.replaceAll("\\s+", " ").trim();
+        if (detail.isEmpty()) {
+            return "no detail supplied by the provider";
+        }
+        return detail.length() <= MAX_ERROR_DETAIL
+                ? detail
+                : detail.substring(0, MAX_ERROR_DETAIL) + "...";
+    }
+
+    private static String textOrEmpty(JsonNode node) {
+        return node != null && node.isTextual() ? node.textValue() : "";
     }
 
     private void onContentStart(

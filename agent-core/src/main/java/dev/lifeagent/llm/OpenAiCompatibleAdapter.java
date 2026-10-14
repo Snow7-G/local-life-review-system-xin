@@ -60,9 +60,21 @@ public final class OpenAiCompatibleAdapter extends AbstractHttpLlmAdapter {
 
     @Override
     protected void validateStreamComplete(Object streamState) {
-        if (!((OpenAiStreamState) streamState).done) {
-            throw new LlmProtocolException("OpenAI SSE stream ended before [DONE]");
+        OpenAiStreamState state = (OpenAiStreamState) streamState;
+        if (state.done) {
+            return;
         }
+        // Hardening from the W2-1 review: some OpenAI-compatible gateways close the connection
+        // without ever sending the `[DONE]` sentinel. That is tolerated only when the provider has
+        // already ended the completion (a finish_reason was seen) and no tool call is still waiting
+        // for its arguments; anything else is a truncated stream and must stay loud.
+        //
+        // TODO(W2-3 循环层): the SSE body itself has no read deadline either - the loop layer that
+        // owns the stream must add an idle timeout. Deliberately not implemented here.
+        if (state.finished && state.tools.isEmpty()) {
+            return;
+        }
+        throw new LlmProtocolException("OpenAI SSE stream ended before [DONE]");
     }
 
     @Override
@@ -91,6 +103,7 @@ public final class OpenAiCompatibleAdapter extends AbstractHttpLlmAdapter {
             JsonNode finishReason = choice.get("finish_reason");
             if (finishReason != null && finishReason.isTextual()) {
                 finishChoiceTools(choiceIndex, state, consumer);
+                state.finished = true;
                 consumer.accept(new MessageDelta(mapStopReason(finishReason.textValue()), null));
             }
         }
@@ -251,6 +264,7 @@ public final class OpenAiCompatibleAdapter extends AbstractHttpLlmAdapter {
     private static final class OpenAiStreamState {
 
         private final Map<ToolKey, OpenAiToolState> tools = new LinkedHashMap<>();
+        private boolean finished;
         private boolean done;
     }
 

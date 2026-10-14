@@ -29,7 +29,9 @@
 - `agent-core/src/test/java/dev/lifeagent/tool/**`
 - `agent-core/SELF-REVIEW-W2-2.md`（新建）
 - **加固项需要时**可改：`agent-core/src/main/java/dev/lifeagent/llm/` 下的
-  `OpenAiCompatibleAdapter.java`、`AnthropicMessagesAdapter.java`、`LlmHttpConfig.java`
+  `OpenAiCompatibleAdapter.java`、`AnthropicMessagesAdapter.java`、`LlmHttpConfig.java`、
+  `MessageDelta.java`（**2026-10-14 补记**：原文漏列，但 §加固项 5 要求给其补 javadoc，
+  白名单与要求自相矛盾；经异源复核指出后由管理者追认列入）
 
 **禁止**：改 `dev.lifeagent.mcp.**`、改根 `src/**`、改任何 `pom.xml`、
 改 `.github/**`、改 `nginx-1.18.0/**`、新增任何第三方依赖。
@@ -56,8 +58,12 @@ public List<ShopBrief> searchNearby(SearchNearbyArgs args) { ... }
 - 类型映射：`String`→`string`、`int/Integer`→`integer`、`long`→`integer`、`double/Double`→`number`、
   `boolean`→`boolean`、`List<T>`→`array`、嵌套 record → 递归 `object`
 - `@Desc` 文本进入 `description`
-- **`Integer`/`Long` 等可空包装类型不入 `required`；原始类型入 `required`**（这与手册
-  §5.3 的 `Integer maxPrice` "可不填" 语义一致）
+- **`required` 规则（2026-10-14 勘误，见文末「勘误与裁定」）**：**除「可空包装类型」外全部入 `required`**。
+  `NULLABLE_WRAPPERS = {Integer, Long, Short, Byte, Float, Double, Boolean, Character, BigInteger, BigDecimal}`
+  不入 `required`（承载手册 §5.3 的 `Integer maxPrice`「可不填」语义）；其余类型——**原始类型、
+  `String`、枚举、数组、`List<T>`、嵌套 record——全部入 `required`**。
+  ⚠️ 本卡原文曾写「原始类型入 required」，与下方测试期望 `["category","radius"]`（含 `String category`）
+  **自相矛盾**；以本行为准。
 
 **测试**：对 `SearchNearbyArgs(@Desc("品类，比如火锅、KTV") String category, @Desc("半径，单位米，最大 5000") int radius, @Desc("人均预算上限，单位元，可不填") Integer maxPrice)`
 生成 schema 并**逐字段断言**，含 `required` 恰为 `["category","radius"]`（`maxPrice` 不在内）。
@@ -147,3 +153,30 @@ mvn -B -ntp verify
 - 不写 Spring 实现（`ShopCatalog` 的实现留 W2-3）
 - 不做 SSE 前端事件（`plan`/`tool_call` 等，W2-3）
 - 不改 MCP 包、不改根项目、不 commit / push
+
+---
+
+## 勘误与裁定（2026-10-14，异源复核后由管理者补记）
+
+### 勘误 1：`required` 规则自相矛盾（**已修正，见 §2**）
+
+本卡原文「原始类型入 `required`」与测试期望 `["category","radius"]` 互相矛盾。
+裁定为「除可空包装类型外全部入 `required`」（详 §2 修正后的表述）。
+责任归属：**任务卡缺陷（管理者）**，非执行器能力问题。
+
+### 裁定 2：`List<T>` / 嵌套 record / 枚举的「可不填」如何表达（**未实现，显式挂账**）
+
+现行规则下，**集合类型与嵌套 record 永远入 `required`**，因为「可空包装类型」这一载体对它们不存在。
+后果：第一支带数组/嵌套参数的工具落地时，模型会被迫发 `[]` / `{}`，与「可不填」意图冲突。
+
+**本次不做**（本卡无集合参数的工具，无实际伤害）。**挂账到 W2-3**：届时引入显式可选标记，
+候选方案二选一——(a) `Optional<T>` 组件；(b) `@Desc` 同级的 `@Optional` 注解。二者择一前不得
+悄悄放宽集合/嵌套的必填性。
+
+### 裁定 3：LLM 事件序列契约变更（**需在 W2-1/W2-3 同步**）
+
+加固后，OpenAI 兼容网关**缺失 `[DONE]` 时**会补发 `MessageDelta(StopReason.TOOL_USE)`
+（`OpenAiCompatibleAdapter`）。即事件数由 3 变 4。消费者（W2-3 循环层）**必须合并 `MessageDelta`
+（各字段取最后一次非 null 值），不得假设只有单个终止事件**——该约定已写入 `MessageDelta` 的 javadoc。
+
+**未在本卡完成**：W2-1 契约说明文档的同步（属 W2-1 交付物，另行处理）。

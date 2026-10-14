@@ -15,7 +15,8 @@
 
 - `src/main/java/com/hmdp/agent/**`（可新增传输层类）
 - `src/test/java/com/hmdp/agent/**`
-- `src/main/resources/application.yml`（**仅限新增 agent/llm 相关配置项**，不得改动既有配置）
+- `src/main/resources/application.yaml`（**仅限新增 agent/llm 相关配置项**，不得改动既有配置；
+  注意实际文件名是 `application.yaml`，不是 `application.yml`）
 - `docs/W2-5-SSE-TRANSPORT.md`（新建）
 
 **禁止**：改 `agent-core/**`（一行都不许）、改 `pom.xml`、改 `.github/**`、改 `nginx-1.18.0/**`、

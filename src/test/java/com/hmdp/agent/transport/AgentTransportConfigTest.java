@@ -71,7 +71,12 @@ class AgentTransportConfigTest {
             // Construction must never call the model or block; the sink is wired, not invoked.
             assertNotNull(loop);
             assertEquals(0, events.size(), "构建 loop 不应产生任何事件");
-            assertNotNull(loop.breaker(), "工厂里的所有 loop 必须共享同一个熔断器");
+            // The assertion message promises shared state, so it must be proven with a second loop:
+            // two loops from the same factory must carry the *same* breaker instance, otherwise the
+            // "three consecutive failures" count would be per-request instead of per-process.
+            AgentLoop second = factory.create(events::add);
+            assertSame(loop.breaker(), second.breaker(),
+                    "工厂里的所有 loop 必须共享同一个熔断器");
         }
     }
 

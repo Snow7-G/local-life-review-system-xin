@@ -41,11 +41,11 @@
 | 5 | 六类事件一一映射，不漏不合并 | `AgentEventStream.java:90-99`（名）、`:106-135`（payload） | ✅ | `AgentEventStreamTest.everyEventTypeMapsToItsOwnName` + `everyPayloadCarriesTheFieldsTheFrontendNeeds` |
 | 6 | `tool_call` 必先于对应 `tool_result`；`answer` 至多一个且在最后 | 事件顺序由 `AgentLoop` 保证；传输层按序写帧 | ✅ | `AgentConversationSseTest.normalTurnEmitsPlanCallResultAnswerInOrder`（顺序断言）+ `resumedToolCallIsEmittedExactlyOnceAcrossBothStreams`（配对） |
 | 7 | `WAITING_USER` 时推 `confirm_required` 并结束本次流（不阻塞线程） | `AgentConversationController.java:147-148` → `pushConfirmRequired`（`:171`）→ `complete()`（`:195`，`finally` 里） | ✅ | `AgentConversationSseTest.deferringGateEmitsConfirmRequiredAndEndsTheStream` |
-| 8 | 提供恢复端点：携带会话 id 与用户回复，从 `SessionStore` 载入后继续推流 | `AgentConversationController.java:116`（`POST /agent/chat/resume`）→ `sessionStore.load`（`:129`）→ `loop.resume`（`:141`） | ✅ | `AgentConversationSseTest.resumeContinuesFromTheStoredSessionWithoutReRunningFinishedToolCalls` |
+| 8 | 提供恢复端点：携带会话 id 与用户回复，从 `SessionStore` 载入后继续推流 | `AgentConversationController.java:116`（`POST /agent/chat/resume`）→ `sessionStore.load`（`:129`）→ `loop.resume`（`:139`） | ✅ | `AgentConversationSseTest.resumeContinuesFromTheStoredSessionWithoutReRunningFinishedToolCalls` |
 | 9 | 主循环只依赖 `LlmClient` 接口；传输层注入配置好的 bean | `AgentTransportConfig.java:70-88`（`llmClient(...)` 造 `AnthropicMessagesAdapter`/`OpenAiCompatibleAdapter`，`AgentLoop` 只收 `LlmClient`） | ✅ | `AgentTransportConfigTest.theLoopFactoryBuildsALoopBoundToTheGivenSink` |
 | 10 | 必须能被测试替换 | `AgentLoopFactory.java:17`（函数式接口）+ 测试 `AgentConversationSseTest.readOnlyFactory(ScriptedLlm)` | ✅ | 全部 SSE 测试的 loop 都来自假 `LlmClient`，无远端调用 |
 | 11 | 只放开 `application.yaml` 新增 agent/llm 配置项，不改既有配置 | `application.yaml:26-39`（新增 `hmdp.agent.*` 块） | ✅ | `git diff src/main/resources/application.yaml` 仅 +14 行、无删除（§4） |
-| 12 | 测试用假 `LlmClient` 脚本化，不得真调远端 | `AgentTransportFixtures.ScriptedLlm`（回放脚本、计数 `streamCalls`） | ✅ | 5 条 SSE 用例内部类断言 `streamCalls`/工具计数，未触网 |
+| 12 | 测试用假 `LlmClient` 脚本化，不得真调远端 | `AgentTransportFixtures.ScriptedLlm`（回放脚本、计数 `streamCalls`） | ✅ | SSE 用例内多处断言模型/工具计数（`AgentConversationSseTest.java:103/155/162/223/234`），未触网 |
 | 13 | 错误路径不中断成 500，以可读错误事件或 `answer` 收尾 | `AgentConversationController.java:149-153`（`ERROR`→错误帧）；工具错误本就由主循环转成 `tool_result(isError=true)` | ✅ | `llmFailureBecomesAReadableErrorFrameNot500`（断言 `status==200` 且只有 `error` 帧）、`toolFailureIsDataAndTheTurnStillEndsWithAnAnswer` |
 
 ---
@@ -205,3 +205,26 @@ grep -rniE 'sk-[a-z0-9]|password|secret' src/main/java/com/hmdp/agent/transport 
 - 新增测试 **16 条全绿**；既有 agent 包测试全绿；`ManagementRoutesTest` 的 3 条红是沙箱 Mockito
   self-attach 限制（`setUp` 即失败），**非本卡因果**，由管理者沙箱外复核。
 - **未 commit、未 push。**
+
+---
+
+## 8. 复核后的处置（管理者执行，2026-10-14）
+
+依据：`docs/reviews/W2-5-review.md`（Q1/Q4/Q5/Q7 通过，Q2/Q3/Q6/Q8 有条件通过，3 条必修 + 12 条建议）。
+
+| # | 必修项 | 处置 |
+|---|---|---|
+| 1 | 沙箱外复跑两条基线并留证 | **管理者已实跑**：`mvn -B -ntp verify` → 根 `73/0/0/3`；`mvn -f agent-core/pom.xml -B -ntp test` → `147/0/0/0`，均 BUILD SUCCESS |
+| 2 | 澄清交付状态 | **答复**：执行器未 commit，交付由管理者提交为 `2392605`（范围：本卡 transport 两棵树 + `application.yaml` 的 `hmdp.agent` 块 + 本文件） |
+| 3 | 修正自述的行号/计数错误 | `loop.resume` 行号 `:141` → **`:139`**（已改）；「5 条」计数改为可直接核验的行号列举；**`AgentTransportConfig.java:70` 经管理者独立核对为正确**（`@Bean` 在 `:69`、方法声明在 `:70`），复核所指的「实为 `:71`」不成立，未改 |
+
+**建议项已采纳并落实的（管理者改动，非执行器）**：
+- 建议 9：`AgentTransportConfigTest` 的断路器断言由「只查非 null」改为**创建两个 loop 并 `assertSame`**，
+  真正证明「工厂里所有 loop 共享同一熔断器」（原断言消息承诺了共享，却只验了一个实例）。
+- 建议 10：清理 `AgentConversationSseTest` 3 处未使用 import（`LinkedHashSet`/`Set`/`assertNotNull`）。
+- 建议 11：任务卡的 `application.yml` 笔误已改为 `application.yaml`。
+
+**仍未做（保留待办）**：建议 1–8、12（覆盖增强与 W2-6 前置说明）。
+
+**复核后代码改动声明**：本节所列的测试改动发生在复核之后，故复核结论**不自动覆盖**它们；
+管理者已独立重跑全部 73 条（全绿），且 `assertSame` 改动本身可被「工厂改为每次 new 一个熔断器」的变异证伪。

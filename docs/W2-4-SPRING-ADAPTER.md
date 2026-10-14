@@ -1,6 +1,8 @@
 # W2-4 自审 — Spring 侧 `ShopCatalog` 适配器
 
-> 执行器：Codex（`gpt-5.6-sol`）。交付范围：`src/main/java/com/hmdp/agent/**`、
+> 执行器：Codex CLI，模型 `deepseek/deepseek-v4.1-flash`（**更正**：初稿误写为
+> `gpt-5.6-sol`，与任务卡 `docs/tasks/W2-4-spring-adapter.md` 的「交给」一栏不符；
+> W2-4R 第二轮复核建议项 2）。交付范围：`src/main/java/com/hmdp/agent/**`、
 > `src/test/java/com/hmdp/agent/**`、本文件。
 > `agent-core/**` 一行未改（`git status --short agent-core/` 为空）。
 > 本文件按 `docs/REVIEW-PROTOCOL.md` 第 1 遍要求，逐条记录「要求 → 实现位置（文件:行）→ 是否达成 → 证据」。
@@ -151,8 +153,11 @@ mvn -B -ntp -o test
 - **47 = 既有 30（`Tests run: 30 / Skipped: 3`）+ `SpringShopCatalogTest` 17。这一跑不含
   `ToolRegistryWiringTest` 的 4 条**（该测试类当时尚未写入）。这正是 §0 与本节旧版计数
   「30 + 21 = 51 ≠ 47」矛盾的来源：47 那一跑发生在接线测试落盘之前；接线测试随后单独跑
-  （`Tests run: 4`），合起来才是 21。合计 51 条只能由两次不同的 `mvn` 命令相加得到，
-  没有任何一次单跑同时包含全部 21 条 —— 旧版把两次口径混写成一句，属自审笔误，特此更正。
+  （`Tests run: 4`），合起来才是 21。合计 51 条可由**一次** `mvn` 单跑直接得到（见本节
+  上方 `:117-122` 的命令与输出：`Tests run: 21`），也可由两次分跑相加得到。
+  **更正（W2-4R 第二轮复核必修 1）**：旧版此处写「没有任何一次单跑同时包含全部 21 条」，
+  与本节自身的 `:117-122` 证据直接冲突 —— 那次单跑确实包含了全部 21 条。真正的口径问题是
+  **`47` 那一跑发生在接线测试落盘之前**，而不是「无法单跑」。特此更正。
 - 逐类核对（`target/surefire-reports/*.txt` 汇总，`tests=` 总和亦为 47）：
   `HmDianPingApplicationTests` 3（Skipped 3）+ 既有 service/controller 类 27 = 30；
   `SpringShopCatalogTest` 17；`ToolRegistryWiringTest` 4（单独一跑）。
@@ -235,7 +240,9 @@ mvn -B -ntp -o test
     `new SearchOrigin(120.15, null)`，断言消息含「搜索原点未配置」+ `hmdp.agent.search-origin.y`，
     并断言 `shopService.calls().isEmpty()`。
 - 变异验证（反向证明，真跑）：临时把 `:67` 的 `requireConfiguredOrigin();` 注释掉后单跑 agent 包
-  → `Tests run: 26, Failures: 2`，失败正是上述两条；恢复后 27/27 绿。
+  → `Tests run: 27, Failures: 2, Errors: 0, Skipped: 0`，失败正是上述两条；恢复后 27/27 绿。
+  **更正（W2-4R 第二轮复核必修 2）**：旧版此处写 `Tests run: 26`，与总数 27 不自洽
+  （去掉一次调用不会减少用例数，只是让其中 2 条失败）。已按管理者沙箱外实跑输出改回 27。
 
 **必修 2 · 更正自审测试计数矛盾**
 - 实现位置：本文件 §0（`:22` 一带）与 §4「全量 `mvn -B -ntp test`」（原 `:140` 一带）。
@@ -310,3 +317,28 @@ mvn -B -ntp -o test -Dtest='com.hmdp.agent.*Test' -Dsurefire.failIfNoSpecifiedTe
 - 说明：卡面给的 `-Dtest='com.hmdp.agent.*'` 在本机 surefire 3.5.6 下选出 0 条（无 `Tests run` 输出、BUILD SUCCESS），
   已改用 `-Dtest='com.hmdp.agent.*Test'` 以获得真实的 27 条执行结果（上述即该命令输出）。
 - 未提交、未 push。
+
+---
+
+## 8. 第二轮复核后的更正（管理者执行，2026-10-14）
+
+依据：`docs/reviews/W2-4R-round2` 判决 Q2/Q5/Q7 有条件通过，2 条必修 + 5 条建议。
+
+| # | 必修项 | 更正 |
+|---|---|---|
+| 1 | 本节 §4 旧版写「没有任何一次单跑同时包含全部 21 条」，与本节自身 `:117-122` 的单跑输出（`Tests run: 21`）直接冲突 | 已改为「可由**一次**单跑得到；真正的口径问题是 **47 那一跑发生在接线测试落盘之前**」 |
+| 2 | 变异跑数字写 `Tests run: 26`，与总数 27 不自洽 | 已按管理者沙箱外实跑改回 `Tests run: 27, Failures: 2, Errors: 0, Skipped: 0` |
+
+**建议项 2（出处标注）也一并处理**：本文件头部执行器原写 `gpt-5.6-sol`，与任务卡不符，已更正为
+`deepseek/deepseek-v4.1-flash`。
+
+**未处理（登记为未测分支/未做，非缺陷）**：
+- 复核建议项 1：fail-loud 消息里的配置键在测试中是手抄字面量，与 `AgentCatalogConfig` 的 `@Value` 键无耦合
+  （改键名测试仍绿）——可抽共享常量，暂未做。
+- 复核建议项 3：`SpringShopCatalog.java` 的 `origin == null` 分支无用例覆盖
+  （`AgentCatalogConfig` 必注入 bean，实际不可达），登记为未测分支。
+- 复核建议项 4：本文件某处标 `SpringShopCatalog.java:144-151`，方法体实为 `:144-150`（`:151` 为结束花括号），
+  纯行号精度问题。
+
+**最终验收（管理者在沙箱外实跑）**：根项目 `Tests run: 57, Failures: 0, Errors: 0, Skipped: 3`；
+`agent-core` `Tests run: 147, Failures: 0, Errors: 0, Skipped: 0`。两者均 BUILD SUCCESS。

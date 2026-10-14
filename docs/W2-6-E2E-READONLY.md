@@ -41,7 +41,7 @@
 ```
 
 - **真实类**：`AgentLoop`、`HookChain`、`ToolRegistry`、`ShopTools`、`SpringShopCatalog`。
-  它们全部是生产代码，测试只是 new 出来并接好（`E2eHarness.java:88`–`:101`）。
+  它们全部是生产代码，测试只是 new 出来并接好（`E2eHarness.java:88`–`:104`，其中 `:104` 是构造 `AgentLoop` 的调用点）。
 - **假**：只有 `LlmClient`（`ScriptedLlm`）与三个业务服务（`RecordingService` 动态代理）。
   三个服务返回带 `distance` 的 `Shop`/`ShopType`，因此**半径、预算、品类解析都真的在
   `SpringShopCatalog` 里跑**，不是替身里算的。
@@ -127,3 +127,47 @@ stopReason: ANSWERED  toolCalls=1  answer="为你找到 1 家 500 米内的火�
 - 本卡证明的是“服务级”；真实 MySQL/Redis 的 e2e 属后续另立卡（任务卡已声明）。
 - 根回归与 `agent-core` 基线（73 / 147）请在沙箱外由管理者复跑确认；本卡只保证新增 8 条全绿、
   既有测试文件零改动（对既有基线的唯一影响是新增 8 条）。
+
+---
+
+## 8. 复核后的处置（管理者执行，2026-10-14）
+
+依据：`docs/reviews/W2-6-review.md`（Q1/Q2/Q3/Q4 通过，Q5/Q6/Q7 有条件通过，3 条必修 + 5 条建议）。
+
+### 必修 1 —— `SpringShopCatalog.java` 时间线矛盾 → **虚警，已用 git 证伪**
+
+复核者发现该文件 mtime 落在本卡窗口内（23:37:08）、晚于测试与自审，因而怀疑「src/main 被改动」。
+**真因**：那是管理者的**变异验证**（备份 → 把 `withinRadius` 改为恒真 → 跑 e2e 观察变红 → 还原），
+写盘导致 mtime 前移。**内容未变**，证据：
+
+- `git diff --stat HEAD -- src/main/java/com/hmdp/agent/SpringShopCatalog.java` → **0 行**
+- `git status --porcelain` → **空**（工作区干净）
+- `git show --stat HEAD` → 仅 **4 文件**：`docs/W2-6-E2E-READONLY.md` + e2e 下 3 个测试文件（895 行新增）
+- `grep -c MUTATION src/main/java/com/hmdp/agent/SpringShopCatalog.java` → **0**
+
+即：**本卡确为零生产代码改动**。副作用教训：**变异验证会改变被变异文件的 mtime**，
+故 `mtime` 不能作为「某文件本轮未被改动」的证据（本轮复核正是被此误导）。
+
+### 必修 2 —— 提交归属
+
+执行器未 commit（符合卡面约束）；交付由**管理者**提交为 `58b1c96`。
+
+### 必修 3 —— 收尾复跑（最终代码状态）
+
+| 命令 | 结果 |
+|---|---|
+| `mvn -B -ntp -o test -Dtest=ReadOnlyChainE2eTest` | `Tests run: 8, Failures: 0, Errors: 0, Skipped: 0` |
+| `mvn -B -ntp verify`（根） | `Tests run: 81, Failures: 0, Errors: 0, Skipped: 3` |
+| `mvn -f agent-core/pom.xml -B -ntp test` | `Tests run: 147, Failures: 0, Errors: 0, Skipped: 0` |
+
+三者均 BUILD SUCCESS。
+
+### 建议项
+
+- 建议 1（只读断言白名单化）与建议 3（trace 补断言 `tool_result`/`stopReason` 行）：成本低、价值高，登记进后续卡。
+- 建议 2、4、5：保留待办。
+
+### 已采纳的复核指正
+
+复核指出 §1 的行号 `:88–:101`「未覆盖真正 `new AgentLoop` 的 `:104`」——经核对
+`E2eHarness.java:104` 确为构造 `AgentLoop` 的调用点，**该指正成立，已在 §1 修正**。

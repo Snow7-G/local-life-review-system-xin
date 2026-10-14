@@ -23,6 +23,20 @@ spring:
     default-property-inclusion: non_null # JSON处理时忽略非空字段
 mybatis-plus:
   type-aliases-package: com.hmdp.entity # 别名扫描包
+hmdp:
+  agent:
+    # 探店规划 Agent（SSE 传输层，W2-5）。此块为新增，未改动上方任何既有配置。
+    # 凭据只走环境变量：AGENT_LLM_API_KEY 绝不写入本文件（AGENTS.md 铁律 2）。
+    llm:
+      provider: ${AGENT_LLM_PROVIDER:openai}
+      endpoint: ${AGENT_LLM_ENDPOINT:https://api.openai.com/v1}
+      api-key: ${AGENT_LLM_API_KEY:}
+      model: ${AGENT_LLM_MODEL:gpt-4o-mini}
+    prompt:
+      system-prompt: ${AGENT_SYSTEM_PROMPT:你是一名本地生活探店规划助手，只使用只读工具查店，不做任何下单或支付操作。}
+    search-origin:
+      x: ${AGENT_SEARCH_ORIGIN_X:}
+      y: ${AGENT_SEARCH_ORIGIN_Y:}
 logging:
   level:
     com.hmdp: debug

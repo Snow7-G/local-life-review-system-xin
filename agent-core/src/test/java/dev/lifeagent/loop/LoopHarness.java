@@ -40,6 +40,11 @@ public final class LoopHarness {
         final AtomicInteger unknownCalled = new AtomicInteger();
         final AtomicInteger writesInFlight = new AtomicInteger();
         final AtomicInteger maxWritesInFlight = new AtomicInteger();
+        final AtomicInteger writeFailCalls = new AtomicInteger();
+        final AtomicInteger flakyWriteCalls = new AtomicInteger();
+        volatile int flakyWriteFailuresAlreadyServed;
+        final AtomicInteger errorCalls = new AtomicInteger();
+        final AtomicInteger pingCalls = new AtomicInteger();
         volatile int flakyFailuresAlreadyServed;
         final AtomicInteger flakyCalls = new AtomicInteger();
         final List<String> writeOrder = Collections.synchronizedList(new ArrayList<>());
@@ -102,6 +107,32 @@ public final class LoopHarness {
             return "high-risk:" + args.value();
         }
 
+        @AgentTool(name = "probe_write_fail", permission = Permission.WRITE, description = "必败写探针")
+        public String writeFail(ProbeArgs args) {
+            writeFailCalls.incrementAndGet();
+            throw new IllegalStateException("write failure " + writeFailCalls.get());
+        }
+
+        @AgentTool(name = "probe_flaky_write", permission = Permission.WRITE, description = "先失败后成功的写探针")
+        public String flakyWrite(ProbeArgs args) {
+            int call = flakyWriteCalls.incrementAndGet();
+            if (call <= flakyWriteFailuresAlreadyServed) {
+                throw new IllegalStateException("flaky write failure " + call);
+            }
+            return "flaky_write:ok#" + call;
+        }
+
+        @AgentTool(name = "probe_read_error", permission = Permission.READ, description = "抛 Error 的只读探针")
+        public String readError(ProbeArgs args) {
+            errorCalls.incrementAndGet();
+            throw new AssertionError("probe boom");
+        }
+
+        @AgentTool(name = "probe_ping", permission = Permission.READ, description = "必成功只读探针")
+        public String ping(ProbeArgs args) {
+            return "pong:" + pingCalls.incrementAndGet();
+        }
+
         private String readAInternal() {
             readCalls.incrementAndGet();
             concurrentlyRunning.add("probe_read_a");
@@ -162,6 +193,16 @@ public final class LoopHarness {
                 new ToolCircuitBreaker(3), sink::accept);
     }
 
+    static AgentLoop loop(
+            ScriptedLlm llm,
+            ToolRegistry registry,
+            PermissionGate gate,
+            SessionStore store,
+            RecordingSink sink) {
+        return new AgentLoop(llm, registry, HookChain.empty(), gate, store,
+                new ToolCircuitBreaker(3), sink::accept);
+    }
+
     static LoopConfig config(String sessionId, String userMessage, LoopBudget budget) {
         return new LoopConfig(sessionId, "system", null, userMessage, budget);
     }
@@ -185,4 +226,21 @@ public final class LoopHarness {
     static ScriptedLlm.ToolSpec flaky(String callId) {
         return ScriptedLlm.call(callId, "probe_flaky", "{\"value\":\"x\"}");
     }
+
+    static ScriptedLlm.ToolSpec writeFail(String callId) {
+        return ScriptedLlm.call(callId, "probe_write_fail", "{\"value\":\"x\"}");
+    }
+
+    static ScriptedLlm.ToolSpec flakyWrite(String callId) {
+        return ScriptedLlm.call(callId, "probe_flaky_write", "{\"value\":\"x\"}");
+    }
+
+    static ScriptedLlm.ToolSpec readError(String callId) {
+        return ScriptedLlm.call(callId, "probe_read_error", "{\"value\":\"x\"}");
+    }
+
+    static ScriptedLlm.ToolSpec ping(String callId) {
+        return ScriptedLlm.call(callId, "probe_ping", "{\"value\":\"x\"}");
+    }
+
 }

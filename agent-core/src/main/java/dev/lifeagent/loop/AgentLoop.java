@@ -36,6 +36,7 @@ import dev.lifeagent.tool.ToolRegistry;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -430,7 +431,9 @@ public final class AgentLoop {
             return;
         }
         for (ToolCallRequest request : batch) {
-            emit(new ToolCallEvent(request.callId(), request.toolName(), request.arguments()));
+            if (session.markToolCallEventEmitted(request.callId())) {
+                emit(new ToolCallEvent(request.callId(), request.toolName(), request.arguments()));
+            }
         }
         // Submit every call before awaiting any of them, so the whole batch is in flight at once.
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
@@ -439,7 +442,7 @@ public final class AgentLoop {
                 futures.add(executor.submit(() -> executeOne(context, session, request)));
             }
             for (int slot = 0; slot < batch.size(); slot++) {
-                appendResult(session, context, await(futures.get(slot)));
+                appendResult(session, context, await(futures.get(slot), batch.get(slot)));
                 session.recordToolCalls(1);
             }
         }
@@ -447,7 +450,10 @@ public final class AgentLoop {
 
     private Gated runGatedCall(LoopSession session, TurnContext context, ToolCallRequest request) {
         Permission permission = permissionOf(request);
-        emit(new ToolCallEvent(request.callId(), request.toolName(), request.arguments()));
+        // Emitted before the gate on purpose: a deferred call must still be visible to the model as
+        // "requested". The session records the callId so a resume re-entering this method does not
+        // emit it again - exactly one tool_call per callId, paired with one tool_result.
+        emitToolCall(session, request);
 
         StepDecision preTool = hookChain.beforeTool(
                 context, request.callId(), request.toolName(), request.arguments());
@@ -497,7 +503,9 @@ public final class AgentLoop {
     private ToolCallOutcome executeOne(TurnContext context, LoopSession session, ToolCallRequest request) {
         try {
             return executeChecked(context, session, request);
-        } catch (RuntimeException failure) {
+        } catch (Throwable failure) {
+            // Throwable, not just RuntimeException: a tool (or a hook) that throws an Error must be
+            // shortened to one line and handed back, never allowed to escape the loop.
             return new ToolCallOutcome(request, ToolCallOutcome.Status.FAILURE, true,
                     LoopErrorMessages.notRun("执行出错：" + failure.getClass().getSimpleName()
                             + (failure.getMessage() == null ? "" : "：" + failure.getMessage())));
@@ -518,24 +526,37 @@ public final class AgentLoop {
         }
         JsonNode arguments = hookChain.rewriteArguments(
                 context, request.callId(), request.toolName(), request.arguments());
+        ToolCallRequest effective = new ToolCallRequest(request.callId(), request.toolName(), arguments);
+        // The read-only path must consume the breaker too: a READ tool never passes through
+        // runGatedCall, so without this check its failures would never trip - breaking the promise
+        // that three consecutive failures stop the tool for the session regardless of permission.
+        if (circuitBreaker.isOpen(session.sessionId(), request.toolName())) {
+            return new ToolCallOutcome(effective, ToolCallOutcome.Status.CIRCUIT_OPEN, true,
+                    LoopErrorMessages.circuitOpen(request.toolName(),
+                            circuitBreaker.consecutiveFailures(session.sessionId(), request.toolName())));
+        }
         ToolOutcome outcome = registry.invoke(request.toolName(), arguments);
         recordBreaker(session, outcome);
         // Post-tool observation happens once, in appendResult, for every execution path.
-        return new ToolCallOutcome(
-                new ToolCallRequest(request.callId(), request.toolName(), arguments),
+        return new ToolCallOutcome(effective,
                 outcome.isError() ? ToolCallOutcome.Status.FAILURE : ToolCallOutcome.Status.SUCCESS,
                 outcome.isError(), LoopErrorMessages.forOutcome(outcome));
     }
 
-    private ToolCallOutcome await(Future<ToolCallOutcome> future) {
+    private ToolCallOutcome await(Future<ToolCallOutcome> future, ToolCallRequest request) {
         try {
             return future.get();
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("interrupted while waiting for a read-only tool", interrupted);
+            return new ToolCallOutcome(request, ToolCallOutcome.Status.FAILURE, true,
+                    LoopErrorMessages.notRun("只读工具等待被中断"));
         } catch (ExecutionException failure) {
+            // executeOne already turns every throwable into an outcome, so this is a last-resort
+            // guard: a failure here still becomes a single-line result, never an exception out of run().
             Throwable cause = failure.getCause();
-            throw cause instanceof RuntimeException runtime ? runtime : new IllegalStateException(cause);
+            String detail = cause == null ? "未知错误" : cause.getClass().getSimpleName();
+            return new ToolCallOutcome(request, ToolCallOutcome.Status.FAILURE, true,
+                    LoopErrorMessages.notRun("执行出错：" + detail));
         }
     }
 
@@ -583,7 +604,12 @@ public final class AgentLoop {
     private void appendBlockedResults(LoopSession session, List<ToolCallRequest> requests, String reason) {
         List<ContentBlock> content = new ArrayList<>(requests.size());
         for (ToolCallRequest request : requests) {
-            content.add(new ToolResultBlock(request.callId(), LoopErrorMessages.notRun(reason), true));
+            JsonNode failed = LoopErrorMessages.notRun(reason);
+            content.add(new ToolResultBlock(request.callId(), failed, true));
+            // Symmetric with appendBudgetExhausted: a blocked call still appears in the event
+            // stream, call then result, so every callId pairs exactly once.
+            emitToolCall(session, request);
+            emit(new ToolResultEvent(request.callId(), request.toolName(), true, failed));
         }
         session.append(new Message(Role.TOOL, content));
     }
@@ -639,6 +665,13 @@ public final class AgentLoop {
             throw new IllegalArgumentException("config.sessionId does not match the session");
         }
         return session;
+    }
+
+    /** Emits the {@code tool_call} event for a call exactly once per session. */
+    private void emitToolCall(LoopSession session, ToolCallRequest request) {
+        if (session.markToolCallEventEmitted(request.callId())) {
+            emit(new ToolCallEvent(request.callId(), request.toolName(), request.arguments()));
+        }
     }
 
     private void emitPlan(List<ToolCallRequest> requests) {

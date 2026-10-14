@@ -117,3 +117,42 @@ git status --porcelain agent-core/src/test/java/dev/lifeagent/ | grep -vE "hook|
 
 - 本文件不宣称"复核已通过"——第 2 遍（DSH 异源只读复核）与第 3 遍（管理者验收）结论另行记录。
 - 本次**未**再调用外部模型完成收尾；§2/§3/§4 中的命令均由管理者**真实执行**。
+
+## 7. 返工记录（W2-3R）
+
+> 依据：返工卡 `docs/tasks/W2-3R-review-fixes.md` + 异源复核 `docs/reviews/W2-3-review.md`。
+> 执行者：Codex（`gpt-5.6-sol`，沙箱 `workspace-write`）。本节只记录本轮真实落地并**真跑通过**的项。
+> 硬边界：仅改 `loop/**`（主/测）与本节；未动 `mcp/llm/tool/hook/event`、根 `src`、任何 `pom.xml`、`.github`；未新增依赖；既有 136 条未改未删。
+> 新增测试文件：`agent-core/src/test/java/dev/lifeagent/loop/ReasoningLoopTest.java`（10 条）。
+
+### 7.1 逐条核对
+
+| # | 必修项 | 实现位置（文件:行） | 证据（测试名 + 断言要点） |
+|---|---|---|---|
+| 1 | 只读工具绕过熔断 | `AgentLoop.java:531-538`（`executeChecked` 在 `registry.invoke` 前查 `isOpen`，已熔断直接返回 `CIRCUIT_OPEN`，不进入业务方法）；与写路径同 `ToolCircuitBreaker`、同 `(sessionId, toolName)` 键（`AgentLoop.java:485-494`） | `ReasoningLoopTest.circuitOpensOnReadToolsAfterThreeConsecutiveFailures`：`probe_fail` 连调 4 次，断言 `probe.failingCalls == 3`（第 4 次未进入方法体）+ 第 4 个结果 `isError()` 且含「已熔断」。`oneSuccessResetsTheConsecutiveFailureCount`：`probe_flaky_write` 前 2 败后成，断言第 5 次仍进入（`flakyWriteCalls == 5`）证明成功一次即重置。`circuitAlsoTripsOnWriteTools`：写路径 `writeFailCalls == 3` |
+| 2 | 挂起/恢复测试 | 主循环未改（`AgentLoop.resume` 既有实现，:197-222）；新增探针 `LoopHarness.loop(...store,sink)` 重载（`LoopHarness.java:151-162`） | `ReasoningLoopTest.deferSuspendsTheSessionAndResumeReplaysOnlyTheUnexecutedTail`：Defer 的 `PermissionGate` + 假工具，首次 `run` 断言 `WAITING_USER`、`store.load(...)` 非空且状态 `WAITING_USER`；`resume` 后 `probe.pingCalls == 1`（已完成的只读未被重复执行）、`probe.writeCalls == 1`、末端 `ANSWERED` |
+| 3 | 步数/token 预算测试 | 主循环未改（`AgentLoop.exhaust` :591-613、`WRAP_UP_NOTE` :84） | `maxStepsWrapsUpWithAToollessFinalCall`：`maxToolCalls=3`，`pingCalls == 3`、`MAX_STEPS`、`lastRequest().tools()` 为空、历史含「资源上限」收尾提示、保留文本「收尾答复」。`tokenBudgetExhaustionTakesTheSameWrapUpPath`：`maxTokens=100`，一轮用 150 token ⇒ `BUDGET_EXHAUSTED`、同样无工具收尾调用 |
+| 4 | 自审 §2(ii)(iii) 更正 | 由管理者负责（本卡 §4 注明「管理者负责改自审，你只需保证测试真实存在」）；本轮把 (ii)(iii) 声称的测试**真的补出** | (ii) → `circuitOpens...`（§7.1 #1）；(iii) → `preModelBlockNeverCallsTheModel`：`ScriptedLlm` 空脚本，断言 `llm.streamCalls() == 0`，若模型被调用会因「no more scripted turns」转 ERROR |
+| 5 | 修 `tool_call` 重复发射 | `LoopSession.java:148-155` 新增 `emittedToolCallIds` + `markToolCallEventEmitted`（随 `copy()` 复制）；`AgentLoop.java:671-675` 新增 `emitToolCall`，仅首次发射；`runGatedCall` 改用它（:456-459）、`runReadOnlyBatch`（:433-439）、`appendBlockedResults`（:611） | `deferSuspendsTheSessionAndResumeReplaysOnlyTheUnexecutedTail` 经 `assertPairedAndSingleAnswer` 断言 `call-w1` 只发 1 次 `tool_call`（Defer 首发、resume 不重发）。沿用「闸门之前发射」以免 `confirm_required` 场景模型看不到请求（保持既有语义） |
+| 6 | 事件序列/配对测试 | 断言器 `ReasoningLoopTest.java:316-347`（`assertPairedAndSingleAnswer`） | 按 `callId` 核验：`tool_call`/`tool_result` 键集相等且各恰 1 次、每个 result 在其 call 之后、`answer` 至多 1 且必须在最后。覆盖并行+串行（`parallelAndSerialCallsPairTheirEventsAndAnswerComesLast`）与 Defer/resume（#2） |
+
+### 7.2 两处 Q3 缺陷
+
+| 缺陷 | 实现位置 | 证据 |
+|---|---|---|
+| 工具抛 `Error` 逃出 `run()` | `AgentLoop.java:506-513`：`executeOne` 由 `catch (RuntimeException)` 改 `catch (Throwable)`，转单行失败结果；`await`（:546-559）末道 `ExecutionException` 也转结果，不再抛 | `aToolThrowingAnErrorBecomesAFailedResultNotAnException`：`probe_read_error` 抛 `AssertionError`，断言 `ANSWERED`（不逃逸）+ 结果 `isError()` 且含 `AssertionError` |
+| `appendBlockedResults` 写结果不发事件 | `AgentLoop.java:604-615`：对齐 `appendBudgetExhausted`，对每个被 block 的调用补发 `emitToolCall` + `ToolResultEvent` | `postModelBlockStillEmitsPairedEvents`：post-model block 后 2 次请求仍各发 1 次 `tool_call`，且全部配对、`BLOCKED` |
+
+### 7.3 变异验证（确认新测试真能抓 bug，均已实跑）
+
+- 移除 `executeChecked` 的 `isOpen` 检查 → `circuitOpensOnReadToolsAfterThreeConsecutiveFailures` 红：`expected: <3> but was: <4>`。
+- 移除 `emitToolCall` 去重 → `deferSuspends...` 红：`callId call-w1 ... expected: <1> but was: <2>`。
+- `executeOne` 改回 `RuntimeException` 且 `await` 改回抛出 → `aToolThrowingAnError...` 红：`IllegalStateException: java.lang.AssertionError: probe boom`。
+- 每次变异后已还原修复，最终回归见下。
+
+### 7.4 命令与测试账目
+
+- 实跑（通过）：`MAVEN_OPTS=-Xmx640m mvn -f agent-core/pom.xml -B -ntp -o test -Dtest='Loop*Test,ParallelExecutionTest,HookChainTest,Permission*Test,Circuit*Test,Session*Test,ReasoningLoopTest' -Dsurefire.failIfNoSpecifiedTests=false`
+  → `Tests run: 31, Failures: 0, Errors: 0, Skipped: 0`（HookChainTest 15 + ParallelExecutionTest 6 + ReasoningLoopTest 10）。
+- 未执行：`mvn ... verify` 全量、根项目回归、`node tests/common.test.cjs`、`nginx -t`。**原因**：沙箱禁建 socket，`dev.lifeagent.mcp.HttpTransportTest` 14 条会报 `SocketException: Operation not permitted`（环境限制，非本轮改动引入，本卡明令不重试全量）。全量验收由管理者在沙箱外执行。
+- 新增 10 条（`ReasoningLoopTest`）；`LoopHarness` 增探针与 builder 重载，既有 136 条断言未改未删未放宽。

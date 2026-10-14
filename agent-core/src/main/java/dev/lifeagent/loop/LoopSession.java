@@ -4,8 +4,10 @@ import dev.lifeagent.llm.Message;
 import dev.lifeagent.llm.TokenUsage;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Everything a paused turn needs to be resumed later: the conversation so far, how much budget was
@@ -46,6 +48,7 @@ public final class LoopSession {
     private PendingPermission pendingPermission;
     private List<ToolCallRequest> suspendedCalls = List.of();
     private int resumeCount;
+    private final Set<String> emittedToolCallIds = new LinkedHashSet<>();
 
     /**
      * @param sessionId the session id; also the circuit-breaker partition key
@@ -140,6 +143,18 @@ public final class LoopSession {
         return List.copyOf(suspendedCalls);
     }
 
+    /**
+     * Records that a {@code tool_call} event was already pushed for this call, so a resume that
+     * re-enters the interrupted step does not emit it a second time - every {@code callId} must pair
+     * with exactly one {@code tool_call} and one {@code tool_result}.
+     *
+     * @param callId the tool-use id
+     * @return {@code true} when the event still has to be emitted (first time seen)
+     */
+    boolean markToolCallEventEmitted(String callId) {
+        return emittedToolCallIds.add(Objects.requireNonNull(callId, "callId"));
+    }
+
     void suspend(PendingPermission pending, List<ToolCallRequest> calls) {
         this.pendingPermission = Objects.requireNonNull(pending, "pending");
         this.suspendedCalls = List.copyOf(Objects.requireNonNull(calls, "calls"));
@@ -177,6 +192,7 @@ public final class LoopSession {
         copy.pendingPermission = pendingPermission;
         copy.suspendedCalls = suspendedCalls;
         copy.resumeCount = resumeCount;
+        copy.emittedToolCallIds.addAll(emittedToolCallIds);
         return copy;
     }
 }

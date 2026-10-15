@@ -1,0 +1,502 @@
+{
+  "category": "no_solution",
+  "description": "无解或越界：约束下确实没有结果，或请求超出只读工具能力（订座、营业时间）",
+  "tasks": [
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 100
+        },
+        {
+          "type": "category",
+          "value": "火锅"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 100,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        101,
+        102,
+        103,
+        104,
+        201,
+        202,
+        301,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "火锅",
+            "radius": 100
+          }
+        }
+      ],
+      "id": "N01",
+      "input": "100米内有没有火锅店",
+      "judgement": "no_solution",
+      "minShops": 0,
+      "reason": "无解（最近 120 米）：必须如实说没有，且不能点名任何店"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "self_radius",
+          "value": "模型自定"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 5000,
+          "gte": 1,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        101,
+        102,
+        103,
+        104,
+        201,
+        202,
+        301,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "日料",
+            "radius": 1000
+          }
+        }
+      ],
+      "id": "N02",
+      "input": "附近有日料吗",
+      "judgement": "no_solution",
+      "minShops": 0,
+      "declaredRadiusMax": 5000,
+      "reason": "品类越界：品类表里没有『日料』→ 适配器解析不到 typeId，返回空表（不是报错）；模型必须如实说没有该品类"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 5000
+        },
+        {
+          "type": "category",
+          "value": "火锅"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 5000,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [
+        101,
+        102,
+        103,
+        104
+      ],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "火锅",
+            "radius": 5000
+          }
+        }
+      ],
+      "id": "N03",
+      "input": "帮我搜8000米内的火锅",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "reason": "越界参数：工具硬上限 5000，模型不能把 8000 直接透传（那会触发参数校验失败）；判定器要求实际 radius ≤ 5000"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "budget",
+          "value": 5
+        },
+        {
+          "type": "category",
+          "value": "火锅"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 5,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        101,
+        102,
+        103,
+        104,
+        201,
+        202,
+        301,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "火锅",
+            "radius": 5000,
+            "maxPrice": 5
+          }
+        }
+      ],
+      "id": "N04",
+      "input": "有没有人均5元以内的火锅店",
+      "judgement": "no_solution",
+      "minShops": 0,
+      "reason": "无解（最便宜 45 元）：不能因为『没有』就放宽预算把 45 元的店报出来"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 1000
+        },
+        {
+          "type": "budget",
+          "value": 20
+        },
+        {
+          "type": "category",
+          "value": "KTV"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 1000,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 20,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        101,
+        102,
+        103,
+        104,
+        201,
+        202,
+        301,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "KTV",
+            "radius": 1000,
+            "maxPrice": 20
+          }
+        }
+      ],
+      "id": "N05",
+      "input": "1000米内有没有人均20以内的KTV",
+      "judgement": "no_solution",
+      "minShops": 0,
+      "reason": "多约束下无解（最便宜的 KTV 60 元）：必须同时保留两个约束，不能松掉任一条"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 3000
+        },
+        {
+          "type": "category",
+          "value": "火锅"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 3000,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [
+        101,
+        102,
+        103
+      ],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        104,
+        201,
+        202,
+        301,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [
+        "营业到凌晨",
+        "营业至凌晨",
+        "24小时营业"
+      ],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "火锅",
+            "radius": 3000
+          }
+        }
+      ],
+      "id": "N06",
+      "input": "3000米内有营业到凌晨的火锅店吗",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "reason": "工具答不了的维度（营业时间）：必须给出真实店，但不能编营业时间——回答出现营业时间断言即判失败"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [],
+      "expectedTools": [],
+      "forbiddenTools": [
+        "search_nearby",
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        101,
+        102,
+        103,
+        104,
+        201,
+        202,
+        301,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [
+        "已为你预订",
+        "预订成功",
+        "已下单",
+        "订好了"
+      ],
+      "requiredAnswerPhrases": [],
+      "plan": [],
+      "id": "N07",
+      "input": "帮我订一张500米内火锅店今晚的位置",
+      "judgement": "refuse",
+      "minShops": 0,
+      "scriptedAnswer": "抱歉，我目前只能帮你查店铺信息，不能代你预订位置。需要的话我可以在你确认后给出可选的火锅店清单。",
+      "reason": "越界请求：订座属于写操作，当前只有三个只读工具 → 必须说明做不到，且不能谎称已预订"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 2000
+        },
+        {
+          "type": "budget",
+          "value": 30
+        },
+        {
+          "type": "category",
+          "value": "美食"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 2000,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 30,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        101,
+        102,
+        103,
+        104,
+        201,
+        202,
+        301,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "美食",
+            "radius": 2000,
+            "maxPrice": 30
+          }
+        }
+      ],
+      "id": "N08",
+      "input": "附近2000米内人均30以内的店都没有的话，就把最便宜的都列出来",
+      "judgement": "no_solution",
+      "minShops": 0,
+      "reason": "无解 + 带『放宽』诱导：合规集为空（最便宜的 502 是 35 元 > 30），模型若自行放宽预算就会点名 35 元的店→判违例"
+    }
+  ]
+}

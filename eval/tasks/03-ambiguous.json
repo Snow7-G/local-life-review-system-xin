@@ -1,0 +1,409 @@
+{
+  "category": "ambiguous",
+  "description": "含糊需求：缺品类、缺距离或缺预算，必须先具体化再检索",
+  "tasks": [
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "self_radius",
+          "value": "模型自定"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 5000,
+          "gte": 1,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "美食",
+            "radius": 1000
+          }
+        }
+      ],
+      "id": "A01",
+      "input": "附近有什么好吃的",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "declaredRadiusMax": 5000,
+      "reason": "含糊：没有品类也没有距离 → 必须先把『附近』具体化（声明半径）并查一次，不能直接空谈"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "self_radius",
+          "value": "模型自定"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 5000,
+          "gte": 1,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "美食",
+            "radius": 1000
+          }
+        }
+      ],
+      "id": "A02",
+      "input": "我想找个地方吃饭，随便什么都行",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "declaredRadiusMax": 5000,
+      "reason": "完全开放的需求：至少要真查一轮附近，且半径要落在工具上限内"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "self_radius",
+          "value": "模型自定"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 5000,
+          "gte": 1,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "KTV",
+            "radius": 800
+          }
+        }
+      ],
+      "id": "A03",
+      "input": "周末想和朋友聚一聚，找个近点的地方",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "declaredRadiusMax": 5000,
+      "reason": "含糊到只有『近点』：判定器只看『半径自定且 ≤5000，结果都在自己声明的半径内』"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "self_radius",
+          "value": "模型自定"
+        },
+        {
+          "type": "budget",
+          "value": 90
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 5000,
+          "gte": 1,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 90,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "火锅",
+            "radius": 1000,
+            "maxPrice": 90
+          }
+        }
+      ],
+      "id": "A04",
+      "input": "想吃点辣的，不用太贵",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "declaredRadiusMax": 5000,
+      "declaredBudgetMax": 90,
+      "reason": "模糊预算『不用太贵』：判定器接受模型自定的上限，但要求它必须真的落到 maxPrice（≤90，可覆盖 88 元的店）"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "self_radius",
+          "value": "模型自定"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 5000,
+          "gte": 1,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "咖啡",
+            "radius": 500
+          }
+        }
+      ],
+      "id": "A05",
+      "input": "帮我找个喝东西的地方，离我尽量近",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "declaredRadiusMax": 5000,
+      "reason": "『尽量近』要求半径偏小：判定器核验声明半径 ≤5000 且结果真的在半径内（不允许声明 5000 却报远处的店）"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "self_radius",
+          "value": "模型自定"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 5000,
+          "gte": 1,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "面馆",
+            "radius": 1000
+          }
+        }
+      ],
+      "id": "A06",
+      "input": "附近有没有适合一个人吃饭的",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "declaredRadiusMax": 5000,
+      "reason": "考『把模糊形容词映射成一次真实检索』，而不是让模型编造推荐"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 500
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 500,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "咖啡",
+            "radius": 500
+          }
+        }
+      ],
+      "id": "A07",
+      "input": "附近500米内随便找一个能坐坐的地方就行",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "reason": "半含糊：距离明确（500 米）→ 用固定半径规则判；结果里出现的店都不许超 500 米"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "self_radius",
+          "value": "模型自定"
+        },
+        {
+          "type": "budget",
+          "value": 100
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 5000,
+          "gte": 1,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 100,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "面馆",
+            "radius": 1000,
+            "maxPrice": 100
+          }
+        }
+      ],
+      "id": "A08",
+      "input": "有没有那种人均五六十、走路能到的小馆子",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "declaredRadiusMax": 5000,
+      "declaredBudgetMax": 100,
+      "reason": "口语『走路能到』= 小半径自定；判定器接受 maxPrice 上限放宽到 100（五六十的合理上浮），但必须有"
+    }
+  ]
+}

@@ -1,0 +1,869 @@
+{
+  "category": "multi_constraint",
+  "description": "多约束：距离/预算/品类两条以上同时成立，或需要多条链路（搜索→详情→券）才给得出完整方案",
+  "tasks": [
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 1000
+        },
+        {
+          "type": "budget",
+          "value": 90
+        },
+        {
+          "type": "category",
+          "value": "火锅"
+        },
+        {
+          "type": "has_voucher",
+          "value": "任意"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby",
+        "voucher_list"
+      ],
+      "forbiddenTools": [
+        "shop_detail"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 1000,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 90,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "category",
+          "equals": "火锅"
+        },
+        {
+          "tool": "voucher_list",
+          "path": "shopId",
+          "equals": "101",
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [
+        101
+      ],
+      "mustPresentShopIds": [
+        101
+      ],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        102,
+        103,
+        104,
+        201,
+        202,
+        301,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "火锅",
+            "radius": 1000,
+            "maxPrice": 90
+          }
+        },
+        {
+          "tool": "voucher_list",
+          "args": {
+            "shopId": 101
+          }
+        }
+      ],
+      "id": "M01",
+      "input": "1000米内、人均90以内的火锅店，帮我看下最便宜那家有没有券",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "expectVouchers": true,
+      "reason": "三条约束后只剩 101（88 元 / 120 米）；『最便宜那家』就是合规集里唯一一家，券要真查（88代100 / 45代50）"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 500
+        },
+        {
+          "type": "budget",
+          "value": 100
+        },
+        {
+          "type": "category",
+          "value": "美食"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 500,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 100,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [
+        501
+      ],
+      "mustPresentShopIds": [
+        501
+      ],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        101,
+        102,
+        103,
+        104,
+        201,
+        202,
+        301,
+        302,
+        401,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "美食",
+            "radius": 500,
+            "maxPrice": 100
+          }
+        }
+      ],
+      "id": "M02",
+      "input": "500米内人均100以内的店，有哪家能用券",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "reason": "品类表里『美食』是独立叶子品类（501/502），不是其它品类的父集——考模型是否如实按品类表检索"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 2000
+        },
+        {
+          "type": "budget",
+          "value": 120
+        },
+        {
+          "type": "category",
+          "value": "KTV"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby",
+        "shop_detail",
+        "voucher_list"
+      ],
+      "forbiddenTools": [],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 2000,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 120,
+          "allCalls": true
+        },
+        {
+          "tool": "shop_detail",
+          "path": "shopId",
+          "equals": "201",
+          "allCalls": true
+        },
+        {
+          "tool": "voucher_list",
+          "path": "shopId",
+          "equals": "201",
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [
+        201,
+        202
+      ],
+      "mustPresentShopIds": [
+        201
+      ],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        101,
+        102,
+        103,
+        104,
+        301,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [
+        "1小时欢唱券"
+      ],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "KTV",
+            "radius": 2000,
+            "maxPrice": 120
+          }
+        },
+        {
+          "tool": "shop_detail",
+          "args": {
+            "shopId": 201
+          }
+        },
+        {
+          "tool": "voucher_list",
+          "args": {
+            "shopId": 201
+          }
+        }
+      ],
+      "id": "M03",
+      "input": "2000米内人均120以内的KTV，挑一家评分高的，看下详情和券",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "expectVouchers": true,
+      "reason": "三条链路全开；合规集里 201 评分最高（4.2 vs 4.1）且是唯一有券的一家，故 mustPresent 只钉 201"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 1000
+        },
+        {
+          "type": "budget",
+          "value": 100
+        },
+        {
+          "type": "category",
+          "value": "火锅"
+        },
+        {
+          "type": "has_voucher",
+          "value": "true"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby",
+        "voucher_list"
+      ],
+      "forbiddenTools": [
+        "shop_detail"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 1000,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 100,
+          "allCalls": true
+        },
+        {
+          "tool": "voucher_list",
+          "path": "shopId",
+          "equals": "101",
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [
+        101
+      ],
+      "mustPresentShopIds": [
+        101
+      ],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        102,
+        103,
+        104,
+        201,
+        202,
+        301,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [
+        "88元代100元券",
+        "45元代50元券"
+      ],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "火锅",
+            "radius": 1000,
+            "maxPrice": 100
+          }
+        },
+        {
+          "tool": "voucher_list",
+          "args": {
+            "shopId": 101
+          }
+        }
+      ],
+      "id": "M04",
+      "input": "给我一套：1000米内、人均100以内、有券的火锅店方案",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "expectVouchers": true,
+      "reason": "『有券』是硬约束：合规集只有 101，且它的券必须由 voucher_list 真查出来"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 500
+        },
+        {
+          "type": "budget",
+          "value": 30
+        },
+        {
+          "type": "category",
+          "value": "咖啡"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby",
+        "voucher_list"
+      ],
+      "forbiddenTools": [
+        "shop_detail"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 500,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 30,
+          "allCalls": true
+        },
+        {
+          "tool": "voucher_list",
+          "path": "shopId",
+          "equals": "301",
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [
+        301
+      ],
+      "mustPresentShopIds": [
+        301
+      ],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        101,
+        102,
+        103,
+        104,
+        201,
+        202,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "咖啡",
+            "radius": 500,
+            "maxPrice": 30
+          }
+        },
+        {
+          "tool": "voucher_list",
+          "args": {
+            "shopId": 301
+          }
+        }
+      ],
+      "id": "M05",
+      "input": "500米内、人均30以内的咖啡，顺便看下能省多少钱",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "expectVouchers": false,
+      "reason": "反向陷阱：看似无解，其实 Manner（25元/250米）合规但没券——必须真查券后如实说『没有可用券』"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 1500
+        },
+        {
+          "type": "budget",
+          "value": 130
+        },
+        {
+          "type": "category",
+          "value": "KTV"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 1500,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 130,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [
+        201,
+        202
+      ],
+      "mustPresentShopIds": [
+        201,
+        202
+      ],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        101,
+        102,
+        103,
+        104,
+        301,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "KTV",
+            "radius": 1500,
+            "maxPrice": 130
+          }
+        }
+      ],
+      "id": "M06",
+      "input": "1500米内人均130以内评分4.2以上的KTV",
+      "judgement": "satisfy_all",
+      "minShops": 2,
+      "reason": "评分是软约束（工具返回 score，判定器只核距离/预算两条硬约束），两家都在，故 201/202 都可接受"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 300
+        },
+        {
+          "type": "budget",
+          "value": 50
+        },
+        {
+          "type": "category",
+          "value": "美食"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 300,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 50,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        101,
+        102,
+        103,
+        104,
+        201,
+        202,
+        301,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "美食",
+            "radius": 300,
+            "maxPrice": 50
+          }
+        }
+      ],
+      "id": "M07",
+      "input": "300米内的店，人均50以内，把有券的都列出来",
+      "judgement": "no_solution",
+      "minShops": 0,
+      "reason": "无解：『美食』品类最近的一家也在 400 米；必须如实说没有，不能拿别的品类凑数"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 500
+        },
+        {
+          "type": "category",
+          "value": "火锅"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby",
+        "shop_detail"
+      ],
+      "forbiddenTools": [
+        "voucher_list"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 500,
+          "allCalls": true
+        },
+        {
+          "tool": "shop_detail",
+          "path": "shopId",
+          "equals": "101",
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [
+        101
+      ],
+      "mustPresentShopIds": [
+        101
+      ],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        102,
+        103,
+        104,
+        201,
+        202,
+        301,
+        302,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "火锅",
+            "radius": 500
+          }
+        },
+        {
+          "tool": "shop_detail",
+          "args": {
+            "shopId": 101
+          }
+        }
+      ],
+      "id": "M08",
+      "input": "帮我在500米内的火锅店里挑一家性价比最高的，告诉我地址和人均",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "reason": "『地址』只有 shop_detail 返回 → 第二条链路是必需项；券与需求无关，列为不该调"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 2000
+        },
+        {
+          "type": "budget",
+          "value": 100
+        },
+        {
+          "type": "category",
+          "value": "KTV 与 咖啡"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby"
+      ],
+      "forbiddenTools": [
+        "shop_detail",
+        "voucher_list"
+      ],
+      "minToolCalls": [
+        {
+          "tool": "search_nearby",
+          "count": 2
+        }
+      ],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 2000,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 100,
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [
+        202,
+        301,
+        302
+      ],
+      "mustPresentShopIds": [],
+      "mustPresentCategories": [
+        "KTV",
+        "咖啡"
+      ],
+      "forbiddenShopIds": [
+        101,
+        102,
+        103,
+        104,
+        201,
+        401,
+        501,
+        502
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "KTV",
+            "radius": 2000,
+            "maxPrice": 100
+          }
+        },
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "咖啡",
+            "radius": 2000,
+            "maxPrice": 100
+          }
+        }
+      ],
+      "id": "M09",
+      "input": "2000米内人均100以内，KTV和咖啡各给我一家",
+      "judgement": "satisfy_all",
+      "minShops": 2,
+      "reason": "跨品类必须搜两次（一次只能一个品类）：KTV 只有星聚会 60 元在 2000 米内，咖啡只有 Manner 25 元在 1000 米内"
+    },
+    {
+      "world": "main",
+      "hardConstraints": [
+        {
+          "type": "radius",
+          "value": 2000
+        },
+        {
+          "type": "budget",
+          "value": 60
+        },
+        {
+          "type": "category",
+          "value": "美食"
+        }
+      ],
+      "expectedTools": [
+        "search_nearby",
+        "voucher_list"
+      ],
+      "forbiddenTools": [
+        "shop_detail"
+      ],
+      "minToolCalls": [],
+      "paramChecks": [
+        {
+          "tool": "search_nearby",
+          "path": "radius",
+          "lte": 2000,
+          "allCalls": true
+        },
+        {
+          "tool": "search_nearby",
+          "path": "maxPrice",
+          "lte": 60,
+          "allCalls": true
+        },
+        {
+          "tool": "voucher_list",
+          "path": "shopId",
+          "equals": "502",
+          "allCalls": true
+        }
+      ],
+      "compliantShopIds": [
+        502
+      ],
+      "mustPresentShopIds": [
+        502
+      ],
+      "mustPresentCategories": [],
+      "forbiddenShopIds": [
+        101,
+        102,
+        103,
+        104,
+        201,
+        202,
+        301,
+        302,
+        401,
+        501
+      ],
+      "expectedVoucherTitles": [],
+      "forbiddenAnswerPhrases": [],
+      "requiredAnswerPhrases": [],
+      "plan": [
+        {
+          "tool": "search_nearby",
+          "args": {
+            "category": "美食",
+            "radius": 2000,
+            "maxPrice": 60
+          }
+        },
+        {
+          "tool": "voucher_list",
+          "args": {
+            "shopId": 502
+          }
+        }
+      ],
+      "id": "M10",
+      "input": "附近2000米内人均60以内的店都列出来，再帮我看看评分最高那家的券",
+      "judgement": "satisfy_all",
+      "minShops": 1,
+      "expectVouchers": false,
+      "reason": "两家合规（501 的 95 元超预算被滤掉），合规里评分最高是 502（4.2）→ 券查询应打给 502，且它确实没券"
+    }
+  ]
+}

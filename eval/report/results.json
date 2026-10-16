@@ -22,7 +22,7 @@
       "reasons" : [ "回答没有提到应给出的店：顺时针火锅(101)", "回答点名了不该出现的店：老码头火锅(102)" ],
       "violatedShops" : [ "回答点名的 老码头火锅 距离 640.0 米 > 半径 500 米" ],
       "toolCalls" : 1,
-      "durationMillis" : 1.417337,
+      "durationMillis" : 0.822796,
       "inputTokens" : 149,
       "outputTokens" : 16
     }
@@ -42,7 +42,7 @@
       "reasons" : [ "该调的工具没调：shop_detail（实际调用 []）" ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.104113,
+      "durationMillis" : 0.071548,
       "inputTokens" : 17,
       "outputTokens" : 6
     }
@@ -62,7 +62,7 @@
       "reasons" : [ "参数超界：search_nearby.radius=2000 > 500", "工具参数比约束更宽：search_nearby.radius=2000 > 500" ],
       "violatedShops" : [ "搜索结果含超半径的 老码头火锅（640.0 米）" ],
       "toolCalls" : 1,
-      "durationMillis" : 1.747357,
+      "durationMillis" : 0.894824,
       "inputTokens" : 149,
       "outputTokens" : 15
     }
@@ -82,7 +82,7 @@
       "reasons" : [ "参数不符：voucher_list.shopId=101 ≠ 201", "回答没有带出真实券名：1小时欢唱券" ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.669809,
+      "durationMillis" : 0.810962,
       "inputTokens" : 149,
       "outputTokens" : 13
     }
@@ -102,7 +102,7 @@
       "reasons" : [ "回答没有带出真实券名：1小时欢唱券" ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.495679,
+      "durationMillis" : 0.856515,
       "inputTokens" : 149,
       "outputTokens" : 13
     }
@@ -122,7 +122,7 @@
       "reasons" : [ "不该调的工具被调了：search_nearby", "该任务不该调用任何工具，实际调用了 1 次" ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.019442,
+      "durationMillis" : 0.906731,
       "inputTokens" : 149,
       "outputTokens" : 12
     }
@@ -142,7 +142,7 @@
       "reasons" : [ "无解任务没有如实报告『没找到』" ],
       "violatedShops" : [ "回答点名的 顺时针火锅 距离 120.0 米 > 半径 100 米" ],
       "toolCalls" : 1,
-      "durationMillis" : 2.79147,
+      "durationMillis" : 0.869688,
       "inputTokens" : 149,
       "outputTokens" : 15
     }
@@ -162,7 +162,7 @@
       "reasons" : [ "该调的工具没调：search_nearby（实际调用 [place_order]）", "调用了未知工具：place_order" ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.765117,
+      "durationMillis" : 0.59581,
       "inputTokens" : 149,
       "outputTokens" : 13
     }
@@ -182,7 +182,7 @@
       "reasons" : [ "回答出现禁止表述：24小时营业" ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.365011,
+      "durationMillis" : 1.625349,
       "inputTokens" : 149,
       "outputTokens" : 15
     }
@@ -194,7 +194,7 @@
     "violatedRuns" : 0,
     "toolCorrectnessRate" : 1.0,
     "meanSteps" : 0.94,
-    "meanLatencyMillis" : 1.47829982,
+    "meanLatencyMillis" : 1.20234824,
     "meanInputTokens" : 135.96,
     "meanOutputTokens" : 50.2,
     "meanCostUsd" : 0.00116088,
@@ -251,7 +251,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 1.160764,
+    "durationMillis" : 1.005279,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -280,7 +280,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.160764,
+      "durationMillis" : 1.005279,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -293,7 +293,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.142158,
+      "durationMillis" : 1.234761,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -306,7 +306,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.891338,
+      "durationMillis" : 1.531004,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -322,7 +322,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 1.882901,
+    "durationMillis" : 0.923661,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -351,7 +351,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.882901,
+      "durationMillis" : 0.923661,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -364,7 +364,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.128617,
+      "durationMillis" : 1.227298,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -377,7 +377,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.874502,
+      "durationMillis" : 1.152053,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -393,7 +393,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.825879,
+    "durationMillis" : 1.012402,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -423,7 +423,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.825879,
+      "durationMillis" : 1.012402,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -436,7 +436,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.038529,
+      "durationMillis" : 1.0881,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -449,7 +449,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.988533,
+      "durationMillis" : 1.005653,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -465,7 +465,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 3.161998,
+    "durationMillis" : 1.132507,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -494,7 +494,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 3.161998,
+      "durationMillis" : 1.132507,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -507,7 +507,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 3.35174,
+      "durationMillis" : 1.07674,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -520,7 +520,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.070066,
+      "durationMillis" : 0.891964,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -536,7 +536,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 3.367624,
+    "durationMillis" : 1.442441,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -565,7 +565,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 3.367624,
+      "durationMillis" : 1.442441,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -578,7 +578,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.201355,
+      "durationMillis" : 0.969638,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -591,7 +591,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.916665,
+      "durationMillis" : 1.031135,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -607,7 +607,7 @@
     "expectedTools" : [ "shop_detail" ],
     "forbiddenTools" : [ "search_nearby", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 2.442746,
+    "durationMillis" : 1.257641,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -636,7 +636,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.442746,
+      "durationMillis" : 1.257641,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -649,7 +649,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.03058,
+      "durationMillis" : 0.70881,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -662,7 +662,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.530054,
+      "durationMillis" : 0.794776,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -678,7 +678,7 @@
     "expectedTools" : [ "voucher_list" ],
     "forbiddenTools" : [ "search_nearby", "shop_detail" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 15.07471,
+    "durationMillis" : 1.041272,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -706,7 +706,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 15.07471,
+      "durationMillis" : 1.041272,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -719,7 +719,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.263542,
+      "durationMillis" : 1.111769,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -732,7 +732,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.812584,
+      "durationMillis" : 1.043516,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -748,7 +748,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.880096,
+    "durationMillis" : 3.1428,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -778,7 +778,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.880096,
+      "durationMillis" : 3.1428,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -791,7 +791,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.85053,
+      "durationMillis" : 1.324674,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -804,7 +804,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.452438,
+      "durationMillis" : 1.043625,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -820,7 +820,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.957255,
+    "durationMillis" : 1.068166,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -856,7 +856,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.957255,
+      "durationMillis" : 1.068166,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -869,7 +869,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.784396,
+      "durationMillis" : 1.085533,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -882,7 +882,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.979297,
+      "durationMillis" : 0.9404,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -898,7 +898,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.975395,
+    "durationMillis" : 0.993962,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -928,7 +928,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.975395,
+      "durationMillis" : 0.993962,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -941,7 +941,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.909538,
+      "durationMillis" : 1.004484,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -954,7 +954,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.778792,
+      "durationMillis" : 1.172393,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -970,7 +970,7 @@
     "expectedTools" : [ "voucher_list" ],
     "forbiddenTools" : [ "search_nearby", "shop_detail" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 1.256952,
+    "durationMillis" : 0.984979,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -998,7 +998,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.256952,
+      "durationMillis" : 0.984979,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -1011,7 +1011,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.979782,
+      "durationMillis" : 0.78033,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -1024,7 +1024,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.300056,
+      "durationMillis" : 1.244471,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -1040,7 +1040,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 2.139786,
+    "durationMillis" : 4.16417,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -1076,7 +1076,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.139786,
+      "durationMillis" : 4.16417,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -1089,7 +1089,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.623037,
+      "durationMillis" : 1.129996,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -1102,7 +1102,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.555925,
+      "durationMillis" : 2.953011,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -1118,7 +1118,7 @@
     "expectedTools" : [ "search_nearby", "voucher_list" ],
     "forbiddenTools" : [ "shop_detail" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 2.24274,
+    "durationMillis" : 1.50277,
     "tokensUsed" : 319,
     "eventSequence" : [ "plan", "tool_call", "tool_call", "tool_result", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -1167,7 +1167,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 2.24274,
+      "durationMillis" : 1.50277,
       "inputTokens" : 249,
       "outputTokens" : 70
     }, {
@@ -1180,7 +1180,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 2.376281,
+      "durationMillis" : 3.65096,
       "inputTokens" : 249,
       "outputTokens" : 70
     }, {
@@ -1193,7 +1193,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 2.866013,
+      "durationMillis" : 1.374185,
       "inputTokens" : 249,
       "outputTokens" : 70
     } ],
@@ -1209,7 +1209,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 3.743877,
+    "durationMillis" : 2.022043,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -1239,7 +1239,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 3.743877,
+      "durationMillis" : 2.022043,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -1252,7 +1252,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.866592,
+      "durationMillis" : 0.976441,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -1265,7 +1265,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 3.793549,
+      "durationMillis" : 2.549122,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -1281,7 +1281,7 @@
     "expectedTools" : [ "search_nearby", "shop_detail", "voucher_list" ],
     "forbiddenTools" : [ ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 9.488879,
+    "durationMillis" : 1.625302,
     "tokensUsed" : 429,
     "eventSequence" : [ "plan", "tool_call", "tool_call", "tool_call", "tool_result", "tool_result", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -1344,7 +1344,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 3,
-      "durationMillis" : 9.488879,
+      "durationMillis" : 1.625302,
       "inputTokens" : 349,
       "outputTokens" : 80
     }, {
@@ -1357,7 +1357,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 3,
-      "durationMillis" : 6.351821,
+      "durationMillis" : 2.410881,
       "inputTokens" : 349,
       "outputTokens" : 80
     }, {
@@ -1370,7 +1370,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 3,
-      "durationMillis" : 6.938224,
+      "durationMillis" : 2.321664,
       "inputTokens" : 349,
       "outputTokens" : 80
     } ],
@@ -1386,7 +1386,7 @@
     "expectedTools" : [ "search_nearby", "voucher_list" ],
     "forbiddenTools" : [ "shop_detail" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 6.406861,
+    "durationMillis" : 1.877527,
     "tokensUsed" : 319,
     "eventSequence" : [ "plan", "tool_call", "tool_call", "tool_result", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -1435,7 +1435,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 6.406861,
+      "durationMillis" : 1.877527,
       "inputTokens" : 249,
       "outputTokens" : 70
     }, {
@@ -1448,7 +1448,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 4.63889,
+      "durationMillis" : 3.743755,
       "inputTokens" : 249,
       "outputTokens" : 70
     }, {
@@ -1461,7 +1461,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 4.35532,
+      "durationMillis" : 1.687147,
       "inputTokens" : 249,
       "outputTokens" : 70
     } ],
@@ -1477,7 +1477,7 @@
     "expectedTools" : [ "search_nearby", "voucher_list" ],
     "forbiddenTools" : [ "shop_detail" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 1.364149,
+    "durationMillis" : 4.955203,
     "tokensUsed" : 319,
     "eventSequence" : [ "plan", "tool_call", "tool_call", "tool_result", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -1514,7 +1514,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 1.364149,
+      "durationMillis" : 4.955203,
       "inputTokens" : 249,
       "outputTokens" : 70
     }, {
@@ -1527,7 +1527,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 1.464091,
+      "durationMillis" : 3.946848,
       "inputTokens" : 249,
       "outputTokens" : 70
     }, {
@@ -1540,7 +1540,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 3.217495,
+      "durationMillis" : 3.899765,
       "inputTokens" : 249,
       "outputTokens" : 70
     } ],
@@ -1556,7 +1556,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 1.05748,
+    "durationMillis" : 1.248761,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -1592,7 +1592,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.05748,
+      "durationMillis" : 1.248761,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -1605,7 +1605,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.296206,
+      "durationMillis" : 3.204497,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -1618,7 +1618,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.180225,
+      "durationMillis" : 4.059471,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -1634,7 +1634,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 2.395866,
+    "durationMillis" : 3.686007,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -1658,7 +1658,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.395866,
+      "durationMillis" : 3.686007,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -1671,7 +1671,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.743704,
+      "durationMillis" : 3.216714,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -1684,7 +1684,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.723467,
+      "durationMillis" : 1.090443,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -1700,7 +1700,7 @@
     "expectedTools" : [ "search_nearby", "shop_detail" ],
     "forbiddenTools" : [ "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 1.158357,
+    "durationMillis" : 3.968252,
     "tokensUsed" : 319,
     "eventSequence" : [ "plan", "tool_call", "tool_call", "tool_result", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -1743,7 +1743,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 1.158357,
+      "durationMillis" : 3.968252,
       "inputTokens" : 249,
       "outputTokens" : 70
     }, {
@@ -1756,7 +1756,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 0.988912,
+      "durationMillis" : 1.009085,
       "inputTokens" : 249,
       "outputTokens" : 70
     }, {
@@ -1769,7 +1769,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 1.729973,
+      "durationMillis" : 0.848802,
       "inputTokens" : 249,
       "outputTokens" : 70
     } ],
@@ -1785,7 +1785,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 2.09988,
+    "durationMillis" : 3.984779,
     "tokensUsed" : 319,
     "eventSequence" : [ "plan", "tool_call", "tool_call", "tool_result", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -1836,7 +1836,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 2.09988,
+      "durationMillis" : 3.984779,
       "inputTokens" : 249,
       "outputTokens" : 70
     }, {
@@ -1849,7 +1849,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 3.397684,
+      "durationMillis" : 4.101692,
       "inputTokens" : 249,
       "outputTokens" : 70
     }, {
@@ -1862,7 +1862,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 1.431874,
+      "durationMillis" : 1.233121,
       "inputTokens" : 249,
       "outputTokens" : 70
     } ],
@@ -1878,7 +1878,7 @@
     "expectedTools" : [ "search_nearby", "voucher_list" ],
     "forbiddenTools" : [ "shop_detail" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 2.59741,
+    "durationMillis" : 2.617976,
     "tokensUsed" : 319,
     "eventSequence" : [ "plan", "tool_call", "tool_call", "tool_result", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -1915,7 +1915,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 2.59741,
+      "durationMillis" : 2.617976,
       "inputTokens" : 249,
       "outputTokens" : 70
     }, {
@@ -1928,7 +1928,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 1.134507,
+      "durationMillis" : 1.796537,
       "inputTokens" : 249,
       "outputTokens" : 70
     }, {
@@ -1941,7 +1941,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 2,
-      "durationMillis" : 0.937753,
+      "durationMillis" : 1.051142,
       "inputTokens" : 249,
       "outputTokens" : 70
     } ],
@@ -1957,7 +1957,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.804448,
+    "durationMillis" : 0.988858,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -1992,7 +1992,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.804448,
+      "durationMillis" : 0.988858,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2005,7 +2005,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.988548,
+      "durationMillis" : 1.033777,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2018,7 +2018,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.517526,
+      "durationMillis" : 1.156807,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2034,7 +2034,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.904092,
+    "durationMillis" : 1.176328,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -2069,7 +2069,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.904092,
+      "durationMillis" : 1.176328,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2082,7 +2082,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.807289,
+      "durationMillis" : 1.558823,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2095,7 +2095,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.818472,
+      "durationMillis" : 1.127699,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2111,7 +2111,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 1.269163,
+    "durationMillis" : 1.885966,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -2140,7 +2140,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.269163,
+      "durationMillis" : 1.885966,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2153,7 +2153,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.923893,
+      "durationMillis" : 0.814409,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2166,7 +2166,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.75001,
+      "durationMillis" : 0.761144,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2182,7 +2182,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.768669,
+    "durationMillis" : 2.280021,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -2212,7 +2212,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.768669,
+      "durationMillis" : 2.280021,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2225,7 +2225,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.790348,
+      "durationMillis" : 0.767218,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2238,7 +2238,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.745545,
+      "durationMillis" : 1.000967,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2254,7 +2254,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 2.250515,
+    "durationMillis" : 1.193441,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -2283,7 +2283,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.250515,
+      "durationMillis" : 1.193441,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2296,7 +2296,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.796181,
+      "durationMillis" : 0.901722,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2309,7 +2309,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.715004,
+      "durationMillis" : 0.817882,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2325,7 +2325,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.771928,
+    "durationMillis" : 1.819838,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -2354,7 +2354,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.771928,
+      "durationMillis" : 1.819838,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2367,7 +2367,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.666759,
+      "durationMillis" : 0.887186,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2380,7 +2380,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.678072,
+      "durationMillis" : 0.75374,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2396,7 +2396,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.777386,
+    "durationMillis" : 0.854196,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -2425,7 +2425,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.777386,
+      "durationMillis" : 0.854196,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2438,7 +2438,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.662252,
+      "durationMillis" : 0.989182,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2451,7 +2451,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.956922,
+      "durationMillis" : 1.020471,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2467,7 +2467,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.955049,
+    "durationMillis" : 0.923022,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -2497,7 +2497,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.955049,
+      "durationMillis" : 0.923022,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2510,7 +2510,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.271675,
+      "durationMillis" : 2.753562,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2523,7 +2523,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.975292,
+      "durationMillis" : 0.84417,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2539,7 +2539,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.911808,
+    "durationMillis" : 2.499707,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -2562,7 +2562,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.911808,
+      "durationMillis" : 2.499707,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2575,7 +2575,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.805475,
+      "durationMillis" : 0.881958,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2588,7 +2588,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.774063,
+      "durationMillis" : 0.711606,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2604,7 +2604,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.838921,
+    "durationMillis" : 0.631514,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -2627,7 +2627,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.838921,
+      "durationMillis" : 0.631514,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2640,7 +2640,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.754061,
+      "durationMillis" : 0.631212,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2653,7 +2653,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.697976,
+      "durationMillis" : 0.599165,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2669,7 +2669,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.96892,
+    "durationMillis" : 0.987369,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -2716,7 +2716,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.96892,
+      "durationMillis" : 0.987369,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2729,7 +2729,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.795528,
+      "durationMillis" : 0.862817,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2742,7 +2742,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.829456,
+      "durationMillis" : 0.88553,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2758,7 +2758,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 1.728348,
+    "durationMillis" : 2.445608,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -2782,7 +2782,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.728348,
+      "durationMillis" : 2.445608,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2795,7 +2795,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.004466,
+      "durationMillis" : 2.090311,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2808,7 +2808,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.949239,
+      "durationMillis" : 0.807107,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2824,7 +2824,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.757478,
+    "durationMillis" : 0.856534,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -2848,7 +2848,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.757478,
+      "durationMillis" : 0.856534,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2861,7 +2861,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.761434,
+      "durationMillis" : 1.335983,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2874,7 +2874,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.750836,
+      "durationMillis" : 1.901278,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2890,7 +2890,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.914283,
+    "durationMillis" : 0.831118,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -2931,7 +2931,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.914283,
+      "durationMillis" : 0.831118,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2944,7 +2944,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.770059,
+      "durationMillis" : 2.413735,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -2957,7 +2957,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.856071,
+      "durationMillis" : 0.78648,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -2973,7 +2973,7 @@
     "expectedTools" : [ ],
     "forbiddenTools" : [ "search_nearby", "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.058784,
+    "durationMillis" : 0.040954,
     "tokensUsed" : 29,
     "eventSequence" : [ "answer" ],
     "toolCalls" : [ ],
@@ -2988,7 +2988,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.058784,
+      "durationMillis" : 0.040954,
       "inputTokens" : 17,
       "outputTokens" : 12
     }, {
@@ -3001,7 +3001,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.036821,
+      "durationMillis" : 0.011006,
       "inputTokens" : 17,
       "outputTokens" : 12
     }, {
@@ -3014,7 +3014,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.027214,
+      "durationMillis" : 0.008173,
       "inputTokens" : 17,
       "outputTokens" : 12
     } ],
@@ -3030,7 +3030,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.786087,
+    "durationMillis" : 1.086746,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -3054,7 +3054,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 0.786087,
+      "durationMillis" : 1.086746,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -3067,7 +3067,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.738642,
+      "durationMillis" : 1.291169,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -3080,7 +3080,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.607046,
+      "durationMillis" : 0.665362,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -3096,7 +3096,7 @@
     "expectedTools" : [ ],
     "forbiddenTools" : [ "search_nearby", "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.055954,
+    "durationMillis" : 0.041615,
     "tokensUsed" : 26,
     "eventSequence" : [ "answer" ],
     "toolCalls" : [ ],
@@ -3111,7 +3111,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.055954,
+      "durationMillis" : 0.041615,
       "inputTokens" : 17,
       "outputTokens" : 9
     }, {
@@ -3124,7 +3124,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.032565,
+      "durationMillis" : 0.012478,
       "inputTokens" : 17,
       "outputTokens" : 9
     }, {
@@ -3137,7 +3137,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.029758,
+      "durationMillis" : 0.00955,
       "inputTokens" : 17,
       "outputTokens" : 9
     } ],
@@ -3153,7 +3153,7 @@
     "expectedTools" : [ ],
     "forbiddenTools" : [ "search_nearby", "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.037578,
+    "durationMillis" : 0.018332,
     "tokensUsed" : 27,
     "eventSequence" : [ "answer" ],
     "toolCalls" : [ ],
@@ -3168,7 +3168,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.037578,
+      "durationMillis" : 0.018332,
       "inputTokens" : 17,
       "outputTokens" : 10
     }, {
@@ -3181,7 +3181,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.034227,
+      "durationMillis" : 0.010213,
       "inputTokens" : 17,
       "outputTokens" : 10
     }, {
@@ -3194,7 +3194,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.052617,
+      "durationMillis" : 0.009493,
       "inputTokens" : 17,
       "outputTokens" : 10
     } ],
@@ -3210,7 +3210,7 @@
     "expectedTools" : [ ],
     "forbiddenTools" : [ "search_nearby", "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.136639,
+    "durationMillis" : 0.011368,
     "tokensUsed" : 25,
     "eventSequence" : [ "answer" ],
     "toolCalls" : [ ],
@@ -3225,7 +3225,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.136639,
+      "durationMillis" : 0.011368,
       "inputTokens" : 17,
       "outputTokens" : 8
     }, {
@@ -3238,7 +3238,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.030469,
+      "durationMillis" : 0.009336,
       "inputTokens" : 17,
       "outputTokens" : 8
     }, {
@@ -3251,7 +3251,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.028887,
+      "durationMillis" : 0.010267,
       "inputTokens" : 17,
       "outputTokens" : 8
     } ],
@@ -3267,7 +3267,7 @@
     "expectedTools" : [ ],
     "forbiddenTools" : [ "search_nearby", "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.038255,
+    "durationMillis" : 0.018881,
     "tokensUsed" : 19,
     "eventSequence" : [ "answer" ],
     "toolCalls" : [ ],
@@ -3282,7 +3282,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.038255,
+      "durationMillis" : 0.018881,
       "inputTokens" : 17,
       "outputTokens" : 2
     }, {
@@ -3295,7 +3295,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.033636,
+      "durationMillis" : 0.009079,
       "inputTokens" : 17,
       "outputTokens" : 2
     }, {
@@ -3308,7 +3308,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.026097,
+      "durationMillis" : 0.009436,
       "inputTokens" : 17,
       "outputTokens" : 2
     } ],
@@ -3324,7 +3324,7 @@
     "expectedTools" : [ ],
     "forbiddenTools" : [ "search_nearby", "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.037114,
+    "durationMillis" : 0.017794,
     "tokensUsed" : 25,
     "eventSequence" : [ "answer" ],
     "toolCalls" : [ ],
@@ -3339,7 +3339,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.037114,
+      "durationMillis" : 0.017794,
       "inputTokens" : 17,
       "outputTokens" : 8
     }, {
@@ -3352,7 +3352,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.03264,
+      "durationMillis" : 0.009414,
       "inputTokens" : 17,
       "outputTokens" : 8
     }, {
@@ -3365,7 +3365,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.026482,
+      "durationMillis" : 0.00908,
       "inputTokens" : 17,
       "outputTokens" : 8
     } ],
@@ -3381,7 +3381,7 @@
     "expectedTools" : [ ],
     "forbiddenTools" : [ "search_nearby", "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.048017,
+    "durationMillis" : 0.012381,
     "tokensUsed" : 24,
     "eventSequence" : [ "answer" ],
     "toolCalls" : [ ],
@@ -3396,7 +3396,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.048017,
+      "durationMillis" : 0.012381,
       "inputTokens" : 17,
       "outputTokens" : 7
     }, {
@@ -3409,7 +3409,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.027116,
+      "durationMillis" : 0.030446,
       "inputTokens" : 17,
       "outputTokens" : 7
     }, {
@@ -3422,7 +3422,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.066508,
+      "durationMillis" : 0.014321,
       "inputTokens" : 17,
       "outputTokens" : 7
     } ],
@@ -3438,7 +3438,7 @@
     "expectedTools" : [ ],
     "forbiddenTools" : [ "search_nearby", "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.105453,
+    "durationMillis" : 0.012577,
     "tokensUsed" : 23,
     "eventSequence" : [ "answer" ],
     "toolCalls" : [ ],
@@ -3453,7 +3453,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.105453,
+      "durationMillis" : 0.012577,
       "inputTokens" : 17,
       "outputTokens" : 6
     }, {
@@ -3466,7 +3466,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.028675,
+      "durationMillis" : 0.010246,
       "inputTokens" : 17,
       "outputTokens" : 6
     }, {
@@ -3479,7 +3479,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.030681,
+      "durationMillis" : 0.009026,
       "inputTokens" : 17,
       "outputTokens" : 6
     } ],
@@ -3495,7 +3495,7 @@
     "expectedTools" : [ ],
     "forbiddenTools" : [ "search_nearby", "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.041505,
+    "durationMillis" : 0.013349,
     "tokensUsed" : 25,
     "eventSequence" : [ "answer" ],
     "toolCalls" : [ ],
@@ -3510,7 +3510,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.041505,
+      "durationMillis" : 0.013349,
       "inputTokens" : 17,
       "outputTokens" : 8
     }, {
@@ -3523,7 +3523,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.026649,
+      "durationMillis" : 0.009497,
       "inputTokens" : 17,
       "outputTokens" : 8
     }, {
@@ -3536,7 +3536,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.026412,
+      "durationMillis" : 0.009085,
       "inputTokens" : 17,
       "outputTokens" : 8
     } ],
@@ -3552,7 +3552,7 @@
     "expectedTools" : [ ],
     "forbiddenTools" : [ "search_nearby", "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.031539,
+    "durationMillis" : 0.013509,
     "tokensUsed" : 24,
     "eventSequence" : [ "answer" ],
     "toolCalls" : [ ],
@@ -3567,7 +3567,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.031539,
+      "durationMillis" : 0.013509,
       "inputTokens" : 17,
       "outputTokens" : 7
     }, {
@@ -3580,7 +3580,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.03011,
+      "durationMillis" : 0.009394,
       "inputTokens" : 17,
       "outputTokens" : 7
     }, {
@@ -3593,7 +3593,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.02858,
+      "durationMillis" : 0.009126,
       "inputTokens" : 17,
       "outputTokens" : 7
     } ],
@@ -3609,7 +3609,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 1.857765,
+    "durationMillis" : 0.842321,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -3638,7 +3638,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.857765,
+      "durationMillis" : 0.842321,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -3651,7 +3651,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 1.174684,
+      "durationMillis" : 0.719276,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -3664,7 +3664,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 2.260843,
+      "durationMillis" : 1.155585,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -3680,7 +3680,7 @@
     "expectedTools" : [ "search_nearby" ],
     "forbiddenTools" : [ "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 3.18579,
+    "durationMillis" : 0.882672,
     "tokensUsed" : 209,
     "eventSequence" : [ "plan", "tool_call", "tool_result", "answer" ],
     "toolCalls" : [ {
@@ -3709,7 +3709,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 3.18579,
+      "durationMillis" : 0.882672,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -3722,7 +3722,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 3.904009,
+      "durationMillis" : 0.712121,
       "inputTokens" : 149,
       "outputTokens" : 60
     }, {
@@ -3735,7 +3735,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 1,
-      "durationMillis" : 3.801675,
+      "durationMillis" : 0.67551,
       "inputTokens" : 149,
       "outputTokens" : 60
     } ],
@@ -3751,7 +3751,7 @@
     "expectedTools" : [ ],
     "forbiddenTools" : [ "search_nearby", "shop_detail", "voucher_list" ],
     "stopReason" : "ANSWERED",
-    "durationMillis" : 0.093543,
+    "durationMillis" : 0.035517,
     "tokensUsed" : 30,
     "eventSequence" : [ "answer" ],
     "toolCalls" : [ ],
@@ -3766,7 +3766,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.093543,
+      "durationMillis" : 0.035517,
       "inputTokens" : 17,
       "outputTokens" : 13
     }, {
@@ -3779,7 +3779,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.057151,
+      "durationMillis" : 0.010777,
       "inputTokens" : 17,
       "outputTokens" : 13
     }, {
@@ -3792,7 +3792,7 @@
       "reasons" : [ ],
       "violatedShops" : [ ],
       "toolCalls" : 0,
-      "durationMillis" : 0.029056,
+      "durationMillis" : 0.009987,
       "inputTokens" : 17,
       "outputTokens" : 13
     } ],
